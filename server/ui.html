@@ -195,6 +195,7 @@ const App = () => {
     const [playing, setPlaying] = useState(false);
     const [customJ, setCustomJ] = useState('{\n  "services": ["storage"]\n}');
     const logRef = useRef(null);
+    const terminalRef = useRef(null);
 
     useEffect(() => {
         const poll = () => fetch('/api/ui-state').then(r=>r.json()).then(setSt).catch(()=>setSt({status:'error'}));
@@ -221,7 +222,15 @@ const App = () => {
         return ()=>clearInterval(id);
     }, [playing]);
 
-    useEffect(() => { logRef.current?.scrollIntoView({behavior:'smooth'}); }, [st?.sim_state?.logs?.length]);
+    useEffect(() => {
+        const el = terminalRef.current;
+        if (!el) return;
+        // Only scroll if user is already near bottom (100px buffer)
+        const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 100;
+        if (isAtBottom) {
+            el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        }
+    }, [st?.sim_state?.logs?.length]);
 
     const deploy = () => {
         console.log(`[UI] Initiating deployment for task: ${task}`);
@@ -456,7 +465,7 @@ const App = () => {
                                 {playing && <span className="text-[8px] px-1.5 py-0.5 bg-green/10 text-green rounded font-bold border border-green/15 animate-pulse">● RECORDING</span>}
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto bg-[#050810] p-3 font-mono text-[11px] leading-[1.8] relative">
+                        <div ref={terminalRef} className="flex-1 overflow-y-auto bg-[#050810] p-3 font-mono text-[11px] leading-[1.8] relative">
                             {/* Terminal header */}
                             <div className="text-gray-800 text-[9px] mb-3 border-b border-gray-900 pb-2">
                                 <span className="text-gray-700">agent@cloud-red-team</span>:<span className="text-brand">~</span>$ <span className="text-gray-600">./run_simulation --task {tNow} --mode autonomous</span>
