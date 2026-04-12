@@ -57,14 +57,14 @@ def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error
     reward_str = f"{safe_score(reward):.2f}"
     done_str = "true" if done else "false"
     error_str = error if error else "null"
-    print(f"[STEP] step={step} action={action_str} reward={reward_str} done={done_str} error={error_str}", flush=True)
+    print(f"[STEP]  step={step} action={action_str} reward={reward_str} done={done_str} error={error_str}", flush=True)
 
 
 def log_end(success: bool, steps: int, rewards: List[float]) -> None:
     """Emit the [END] log line marking task completion."""
     success_str = "true" if success else "false"
     rewards_str = ",".join(f"{safe_score(r):.2f}" for r in rewards)
-    print(f"[END] success={success_str} steps={steps} rewards={rewards_str}", flush=True)
+    print(f"[END]   success={success_str} steps={steps} rewards={rewards_str}", flush=True)
 
 
 # ---------------------------------------------------------------------------
