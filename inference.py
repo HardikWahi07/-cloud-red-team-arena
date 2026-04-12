@@ -28,8 +28,10 @@ API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-if HF_TOKEN is None:
-    HF_TOKEN = ""
+def validate_config():
+    """Ensure mandatory configuration is present for LLM operations."""
+    if not HF_TOKEN:
+        raise ValueError("HF_TOKEN environment variable is required for autonomous operations. Please set it in your environment.")
 
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 

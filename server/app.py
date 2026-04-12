@@ -28,6 +28,11 @@ app = create_app(
     max_concurrent_envs=1,
 )
 
+# ---------------------------------------------------------------------------
+# Global Application State
+# ---------------------------------------------------------------------------
+# Explicitly instantiate to ensure global ACTIVE_ENV is set for the UI
+_init_env = CloudRedTeamEnvironment()
 
 # ---------------------------------------------------------------------------
 # Metadata
@@ -90,9 +95,9 @@ def ui_state():
 
     return {
         "status": "online",
-        "task": env.t,
-        "step": env.st.step_count,
-        "sim_state": env.zz,
+        "task": env.task_id,
+        "step": env.env_state.step_count,
+        "sim_state": env.state,
         "reasoning_traces": traces[-10:],  # Last 10 traces for UI
     }
 
@@ -111,18 +116,18 @@ async def deploy_custom(req: Request):
         return {"status": "error", "message": "offline"}
     payload = await req.json()
     scenario = payload.get("scenario", {})
-    env.t = "custom"
-    env.zz = scenario
-    env.zz["access_level"] = "none"
-    env.zz["alerts_triggered"] = 0
-    env.zz["budget_remaining"] = int((env.zz.get("limits", {}) or {}).get("budget") or 20)
-    env.zz["rate_counters"] = {}
+    env.task_id = "custom"
+    env.state = scenario
+    env.state["access_level"] = "none"
+    env.state["alerts_triggered"] = 0
+    env.state["budget_remaining"] = int((env.state.get("limits", {}) or {}).get("budget") or 20)
+    env.state["rate_counters"] = {}
     from .grader import get_grader
     from uuid import uuid4
     from openenv.core.env_server.types import State
-    env.g = get_grader("custom")
-    env.la = None
-    env.st = State(episode_id=str(uuid4()), step_count=0, task_id="custom")
+    env.grader = get_grader("custom")
+    env.last_action = None
+    env.env_state = State(episode_id=str(uuid4()), step_count=0, task_id="custom")
     env._l("[+] Custom Environment deployed manually")
     return {"status": "ok"}
 
@@ -141,11 +146,11 @@ async def run_step():
     from .environment import get_active_env
     from .models import CloudRedTeamAction
     env = get_active_env()
-    if not env or not env.zz:
+    if not env or not env.state:
         return {"status": "error", "message": "Environment not initialized"}
 
     # Check termination conditions
-    if env.st.step_count >= 10 or env.zz.get("agent_knowledge", {}).get("objective_complete"):
+    if env.env_state.step_count >= 10 or env.state.get("agent_knowledge", {}).get("objective_complete"):
         return {"status": "done"}
 
     try:
@@ -157,13 +162,13 @@ async def run_step():
 
         # Build observation with full context
         obs = env._o().model_dump()
-        obs["agent_knowledge"] = dict(env.zz.get("agent_knowledge", {}))
-        obs["logs"] = list(env.zz.get("logs", []))
-        obs["alerts_triggered"] = env.zz.get("alerts_triggered", 0)
-        obs["budget_remaining"] = env.zz.get("budget_remaining", 0)
-        obs["limits"] = env.zz.get("limits", {})
+        obs["agent_knowledge"] = dict(env.state.get("agent_knowledge", {}))
+        obs["logs"] = list(env.state.get("logs", []))
+        obs["alerts_triggered"] = env.state.get("alerts_triggered", 0)
+        obs["budget_remaining"] = env.state.get("budget_remaining", 0)
+        obs["limits"] = env.state.get("limits", {})
 
-        act_dict = heuristic_action(env.t, env.st.step_count + 1, obs)
+        act_dict = heuristic_action(env.task_id, env.env_state.step_count + 1, obs)
 
         # Inject reasoning trace into environment logs for terminal display
         mem = get_memory()

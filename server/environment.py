@@ -13,6 +13,7 @@ from .scenarios import load_scenario
 ACTIVE_ENV = None
 
 def get_active_env():
+    """Retrieve the current active simulation environment instance."""
     global ACTIVE_ENV
     return ACTIVE_ENV
 
@@ -211,10 +212,10 @@ class CloudRedTeamEnvironment(
                 k["discovered_services"] = True
             elif u == "query_api":
                 if not k.get("discovered_services"):
-                    a("[-] Network topology unknown. Run scan_network first.")
-                    self.zz["alerts_triggered"] += 1
-                    b0 = float(self.g(self.zz))
-                    b1 = float(self.zz["alerts_triggered"]) * 0.2
+                    a("[-] AccessDenied: networking topology mapping incomplete — reconnaissance required")
+                    self.state["alerts_triggered"] += 1
+                    b0 = float(self.grader(self.state))
+                    b1 = float(self.state["alerts_triggered"]) * 0.2
                     z = max(0.011, min(0.989, b0 + p - b1))
                     o = self._o(q=q)
                     o.reward = z
@@ -275,15 +276,13 @@ class CloudRedTeamEnvironment(
                         a("[!] SECURITY ALERT: Unauthorized database authentication attempt detected.")
                         self.state["alerts_triggered"] += 1
 
-        elif self.t == "hard":
+        elif self.task_id == "hard":
             if u == "scan_network":
-                a("[+] Found repo, ci-cd, secrets-manager, database")
+                a("[+] Network scan complete — Infrastructure mapped: source-repo, ci-cd-pipeline, secrets-manager, rds-database")
                 k["discovered_services"] = True
             if u == "query_api":
                 if not k.get("discovered_services"):
-                    a("[-] Network topology unknown. Run scan_network first.")
-                    self.zz["alerts_triggered"] += 1
-                    b0 = float(self.g(self.zz))
+                    a("[-] AccessDenied: networking topology mapping incomplete — reconnaissance required")
                     self.state["alerts_triggered"] += 1
                     b0 = float(self.grader(self.state))
                     b1 = float(self.state["alerts_triggered"]) * 0.2

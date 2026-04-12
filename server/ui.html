@@ -204,9 +204,19 @@ const App = () => {
     useEffect(() => {
         if (!playing) return;
         const id = setInterval(() => {
-            fetch('/api/run-step',{method:'POST'}).then(r=>r.json()).then(d=>{
-                if(d.status==='done'||d.status==='error') setPlaying(false);
-            }).catch(()=>setPlaying(false));
+            console.log('[UI] Running autonomous step...');
+            fetch('/api/run-step',{method:'POST'})
+                .then(r=>r.json())
+                .then(d=>{
+                    if(d.status==='done'||d.status==='error') {
+                        console.log('[UI] Autonomous run terminated:', d.status);
+                        setPlaying(false);
+                    }
+                })
+                .catch(err=>{
+                    console.error('[UI] Autonomous step failed:', err);
+                    setPlaying(false);
+                });
         }, 1200);
         return ()=>clearInterval(id);
     }, [playing]);
@@ -214,74 +224,107 @@ const App = () => {
     useEffect(() => { logRef.current?.scrollIntoView({behavior:'smooth'}); }, [st?.sim_state?.logs?.length]);
 
     const deploy = () => {
+        console.log(`[UI] Initiating deployment for task: ${task}`);
         setPlaying(false);
-        if(task==='custom'){
-            try{fetch('/api/deploy-custom',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:JSON.parse(customJ)})});}catch{alert('Invalid JSON');}
-        } else {
-            fetch('/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_id:task})}).catch(console.error);
-        }
-    };
-    const step1 = () => fetch('/api/run-step',{method:'POST'}).catch(console.error);
+        const url = task === 'custom' ? '/api/deploy-custom' : '/reset';
+        const body = task === 'custom' ? {scenario: JSON.parse(customJ)} : {task_id: task};
 
-    const on = st?.status==='online';
-    const sim = st?.sim_state||{};
-    const lim = sim.limits||{budget:20};
-    const bud = sim.budget_remaining??0;
-    const alt = sim.alerts_triggered||0;
-    const k = sim.agent_knowledge||{};
-    const logs = sim.logs||[];
-    const traces = st?.reasoning_traces||[];
-    const tNow = st?.task||task;
-    const flow = FLOWS[tNow]||FLOWS.custom;
-    const done = flow.filter(n=>n.check(k)).length;
-    const prog = (done/flow.length)*100;
-    const stealth = Math.max(0,100-(alt*20));
-    const eff = Math.max(0,(bud/Math.max(1,lim.budget))*100);
+        fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        })
+        .then(async r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+            return r.json();
+        })
+        .then(d => {
+            console.log('[UI] Deploy SUCCESS:', d);
+            // Force status refresh
+            fetch('/api/ui-state').then(r=>r.json()).then(setSt).catch(console.error);
+        })
+        .catch(err => {
+            console.error('[UI] Deploy FAILED:', err);
+            alert(`Deployment Failed: ${err.message}`);
+        });
+    };
+
+    const step1 = () => {
+        console.log('[UI] Triggering manual step...');
+        fetch('/api/run-step', {method: 'POST'})
+        .then(async r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+            return r.json();
+        })
+        .then(d => {
+            console.log('[UI] Step SUCCESS:', d);
+            if (d.status === 'error') alert(`Step Error: ${d.message}`);
+        })
+        .catch(err => {
+            console.error('[UI] Step FAILED:', err);
+            alert(`Step Execution Failed: ${err.message}`);
+        });
+    };
+
+    const on = st?.status === 'online';
+    const sim = st?.sim_state || {};
+    const lim = sim.limits || {budget: 20};
+    const bud = sim.budget_remaining ?? 0;
+    const alt = sim.alerts_triggered || 0;
+    const k = sim.agent_knowledge || {};
+    const logs = sim.logs || [];
+    const traces = st?.reasoning_traces || [];
+    const tNow = st?.task || task;
+    const flow = FLOWS[tNow] || FLOWS.custom;
+    const doneSteps = flow.filter(n => n.check(k)).length;
+    const prog = (doneSteps / flow.length) * 100;
+    const stealth = Math.max(0, 100 - (alt * 20));
+    const eff = Math.max(0, (bud / Math.max(1, lim.budget)) * 100);
     const isDone = k.objective_complete || st?.step >= 10;
 
     return (
-        <div className="h-full flex flex-col bg-bg">
+        <div className="h-full flex flex-col bg-bg text-gray-400">
             {/* ═══ HEADER ═══ */}
             <header className="bg-surface/80 backdrop-blur-xl border-b border-border px-5 py-2.5 flex items-center justify-between z-50 shrink-0">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"><I.Shield/></div>
                         <div>
-                            <div className="text-sm font-black text-white tracking-tight leading-none">CLOUD RED TEAM <span className="text-brand font-semibold">ARENA</span></div>
-                            <div className="text-[8px] text-gray-600 uppercase tracking-[0.25em] mt-0.5 font-medium">Operational Command Center v2.0</div>
+                            <div className="text-sm font-black text-white tracking-tight leading-none uppercase">Cloud Red Team <span className="text-brand">Arena</span></div>
+                            <div className="text-[8px] text-gray-600 uppercase tracking-[0.25em] mt-0.5 font-medium">Command Center v2.1</div>
                         </div>
                     </div>
                     <div className="h-6 w-px bg-border mx-1"/>
                     <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border
-                        ${on?'text-green border-green/20 bg-green/5':'text-gray-600 border-border bg-surface'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${on?'bg-green animate-pulse':'bg-gray-700'}`}/>
-                        {on?'LIVE':'OFFLINE'}
+                        ${on ? 'text-green border-green/20 bg-green/5' : 'text-red border-red/20 bg-red/5'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${on ? 'bg-green animate-pulse' : 'bg-red'}`}/>
+                        {on ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}
                     </div>
                     {on && tNow && (
-                        <div className={`text-[9px] font-bold uppercase tracking-wider ${TASK_COLORS[tNow]||'text-gray-400'}`}>
-                            {TASK_NAMES[tNow]||tNow}
+                        <div className={`text-[9px] font-bold uppercase tracking-wider ${TASK_COLORS[tNow] || 'text-gray-400'}`}>
+                             {TASK_NAMES[tNow] || tNow} MISSION
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                    <select className="bg-bg border border-border text-[11px] font-medium rounded px-2 py-1.5 text-gray-300 outline-none focus:border-brand cursor-pointer"
-                        value={task} onChange={e=>setTask(e.target.value)}>
-                        <option value="easy">🟢 Easy — S3 Misconfiguration</option>
-                        <option value="medium">🟡 Medium — SSRF Chain</option>
-                        <option value="hard">🔴 Hard — Supply Chain</option>
-                        <option value="custom">⚙️ Custom JSON</option>
+                <div className="flex items-center gap-2">
+                    <select className="bg-bg border border-border text-[11px] font-medium rounded px-2 py-1.5 text-gray-300 outline-none focus:border-brand cursor-pointer hover:bg-surface transition-colors"
+                        value={task} onChange={e => setTask(e.target.value)}>
+                        <option value="easy">🟢 Easy — S3 Discovery</option>
+                        <option value="medium">🟡 Medium — SSRF / IAM Pivot</option>
+                        <option value="hard">🔴 Hard — Supply Chain Breach</option>
+                        <option value="custom">⚙️ Custom Scenario (JSON)</option>
                     </select>
-                    <button onClick={deploy} className="bg-brand/90 hover:bg-brand text-white px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1 transition-colors">
+                    <button onClick={deploy} className="bg-brand/90 hover:bg-brand text-white px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95">
                         <I.Rotate/> DEPLOY
                     </button>
-                    <button onClick={step1} className="bg-surface hover:bg-card text-gray-300 px-2.5 py-1.5 rounded text-[11px] font-bold flex items-center gap-1 border border-border transition-colors">
+                    <button onClick={step1} disabled={!on} className="bg-surface hover:bg-card text-gray-300 px-2.5 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 border border-border transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                         <I.Skip/> STEP
                     </button>
-                    <button onClick={()=>setPlaying(!playing)}
-                        className={`px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1 transition-all
-                        ${playing?'bg-amber/90 hover:bg-amber text-black ring-1 ring-amber/40':'bg-green/90 hover:bg-green text-black'}`}>
-                        {playing?<><I.Pause/> STOP</>:<><I.Play/> RUN</>}
+                    <button onClick={() => setPlaying(!playing)} disabled={!on}
+                        className={`px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+                        ${playing ? 'bg-amber/90 hover:bg-amber text-black ring-1 ring-amber/40' : 'bg-green/90 hover:bg-green text-black shadow-lg shadow-green/10'}`}>
+                        {playing ? <><I.Pause/> STOP</> : <><I.Play/> RUN AGENT</>}
                     </button>
                 </div>
             </header>
