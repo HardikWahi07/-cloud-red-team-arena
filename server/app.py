@@ -38,8 +38,8 @@ def dashboard():
 
 @app.get("/api/ui-state")
 def ui_state():
-    import server.environment
-    env = server.environment.ACTIVE_ENV
+    from .environment import get_active_env
+    env = get_active_env()
     if not env:
         return {"status": "offline"}
     return {
@@ -52,8 +52,8 @@ def ui_state():
 from fastapi import Request
 @app.post("/api/deploy-custom")
 async def deploy_custom(req: Request):
-    import server.environment
-    env = server.environment.ACTIVE_ENV
+    from .environment import get_active_env
+    env = get_active_env()
     if not env:
         return {"status": "error", "message": "offline"}
     payload = await req.json()

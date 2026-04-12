@@ -12,6 +12,10 @@ from .scenarios import load_scenario
 
 ACTIVE_ENV = None
 
+def get_active_env():
+    global ACTIVE_ENV
+    return ACTIVE_ENV
+
 class CloudRedTeamEnvironment(
     Environment[CloudRedTeamAction, CloudRedTeamObservation, State]
 ):
