@@ -17,10 +17,10 @@ from typing import Callable, Dict
 
 import math
 
-def safe_score(x: float, eps: float = 0.1) -> float:
+def safe_score(x: float, eps: float = 0.01) -> float:
     """
-    Ultra-Strict (0.1, 0.9) range enforcement.
-    Guarantees absolute compliance with platform rules even with poor precision.
+    Strictly ensure that scores are within (0.01, 0.99) range.
+    Guarantees that even with 2nd decimal rounding in logs, scores NEVER print as 0.00 or 1.00.
     """
     try:
         val = float(x)
@@ -32,7 +32,7 @@ def safe_score(x: float, eps: float = 0.1) -> float:
 
 
 def clamp(val: float) -> float:
-    """Clamps to strict (0.1, 0.9) range."""
+    """Clamps to strict (0.01, 0.99) range."""
     return safe_score(val)
 
 

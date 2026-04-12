@@ -33,6 +33,7 @@ class CloudRedTeamEnvironment(
         self.sim_data["rate_counters"] = {}
         self.grader = get_grader(self.task_id)
         self.last_action: Optional[str] = None
+        self.cumulative_reward = 0.0
         self.env_state = State(episode_id=str(uuid4()), step_count=0)
 
     def _l(self, m: str):
@@ -79,6 +80,7 @@ class CloudRedTeamEnvironment(
             step_count=0,
             task_id=task_id,
         )
+        self.cumulative_reward = 0.0
         return self._o(q=["[i] SYSTEM: Cyber range reset. Simulation online."])
 
     def step(
@@ -121,8 +123,18 @@ class CloudRedTeamEnvironment(
             self.sim_data["alerts_triggered"] += 1
             a("[!] CRITICAL: Operational budget exhausted. Mission terminated.")
             b0 = float(self.grader(self.sim_data))
-            b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-            z = safe_score(b0 + p - b1)
+            d = bool(k.get("objective_complete")) or b0 >= 1.0 or self.env_state.step_count >= 10
+
+            # Sparse scoring: ensure total cumulative reward == grader score
+            # and every step is strictly between 0 and 1
+            if d:
+                # Final step: give the remainder of the total score
+                z = safe_score(b0 - self.cumulative_reward)
+            else:
+                # Intermediate step: give a tiny baseline reward
+                z = safe_score(0.01)
+            
+            self.cumulative_reward += z
             o = self._o(q=q)
             o.reward = z
             o.done = True
@@ -395,10 +407,15 @@ class CloudRedTeamEnvironment(
             p -= 0.1
 
         b0 = float(self.grader(self.sim_data))
-        b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-        z = safe_score(b0 + p - b1)
         d = bool(k.get("objective_complete")) or b0 >= 1.0 or self.env_state.step_count >= 10
 
+        # Sparse scoring: ensure total cumulative reward == grader score
+        if d:
+            z = safe_score(b0 - self.cumulative_reward)
+        else:
+            z = safe_score(0.01)
+        
+        self.cumulative_reward += z
         o = self._o(q=q)
         o.reward = z
         o.done = d
