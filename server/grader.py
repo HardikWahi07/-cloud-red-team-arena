@@ -15,17 +15,24 @@ based on action consistency (avoiding repeated/redundant actions).
 from typing import Callable, Dict
 
 
+import math
+
 def safe_score(x: float, eps: float = 0.01) -> float:
     """
     Strictly ensure that scores are within (0.01, 0.99) range.
-    Guarantees that even with 2-decimal rounding in logs, scores NEVER print as 0.00 or 1.00.
+    Performs defensive checks against NaN, Infinity, and malformed inputs.
     """
-    val = float(x)
-    return min(max(val, eps), 1.0 - eps)
+    try:
+        val = float(x)
+        if math.isnan(val) or math.isinf(val):
+            return 0.5
+        return min(max(val, eps), 1.0 - eps)
+    except (ValueError, TypeError):
+        return 0.5
 
 
 def clamp(val: float) -> float:
-    """Clamps to strict (0.01, 0.99) range."""
+    """Clamps to strict (0.01, 0.99) range with NaN safety."""
     return safe_score(val)
 
 

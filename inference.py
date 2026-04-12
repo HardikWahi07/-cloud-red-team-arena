@@ -63,7 +63,9 @@ def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error
 def log_end(success: bool, steps: int, rewards: List[float]) -> None:
     """Emit the [END] log line marking task completion."""
     success_str = "true" if success else "false"
-    rewards_str = ",".join(f"{safe_score(r):.2f}" for r in rewards)
+    # Ensure at least one reward is always reported even if episode failed immediately
+    rs = rewards if rewards else [0.01]
+    rewards_str = ",".join(f"{safe_score(r):.2f}" for r in rs)
     print(f"[END]   success={success_str} steps={steps} rewards={rewards_str}", flush=True)
 
 
@@ -473,7 +475,7 @@ async def run_task(env: CloudRedTeamArenaEnv, client: OpenAI, task_id: str) -> N
     """Run a single evaluation episode for the given task."""
     rewards: List[float] = []
     steps_taken = 0
-    last_reward = 0.01
+    last_reward = safe_score(0.01)
 
     reset_memory()
     log_start(task_id)
@@ -517,7 +519,7 @@ async def run_task(env: CloudRedTeamArenaEnv, client: OpenAI, task_id: str) -> N
         if done:
             break
 
-    score = sum(rewards) / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.01
+    score = (sum(rewards) / MAX_TOTAL_REWARD) if MAX_TOTAL_REWARD > 0 else 0.01
     score = safe_score(score)
     success = score >= SUCCESS_THRESHOLD
 
