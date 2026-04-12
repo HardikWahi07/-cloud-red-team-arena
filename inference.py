@@ -29,10 +29,8 @@ API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-def validate_config():
-    """Ensure mandatory configuration is present for LLM operations."""
-    if not HF_TOKEN:
-        raise ValueError("HF_TOKEN environment variable is required for autonomous operations. Please set it in your environment.")
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
 
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 
@@ -56,7 +54,7 @@ def log_start(task: str) -> None:
 def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error: str | None) -> None:
     """Emit the [STEP] log line for one agent action."""
     action_str = json.dumps(action, separators=(",", ":"), sort_keys=True)
-    reward_str = f"{safe_score(reward):.6f}"
+    reward_str = f"{safe_score(reward):.2f}"
     done_str = "true" if done else "false"
     error_str = error if error else "null"
     print(f"[STEP] step={step} action={action_str} reward={reward_str} done={done_str} error={error_str}", flush=True)
@@ -65,7 +63,7 @@ def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error
 def log_end(success: bool, steps: int, rewards: List[float]) -> None:
     """Emit the [END] log line marking task completion."""
     success_str = "true" if success else "false"
-    rewards_str = ",".join(f"{safe_score(r):.6f}" for r in rewards)
+    rewards_str = ",".join(f"{safe_score(r):.2f}" for r in rewards)
     print(f"[END] success={success_str} steps={steps} rewards={rewards_str}", flush=True)
 
 
