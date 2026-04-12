@@ -286,7 +286,7 @@ class CloudRedTeamEnvironment(
                     self.sim_data["alerts_triggered"] += 1
                     b0 = float(self.grader(self.sim_data))
                     b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-                    z = safe_score(b0 + p - b1)
+                    z = safe_score(b0 + p - b1, eps=0.1)
                     o = self._o(q=q)
                     o.reward = z
                     o.done = False
@@ -413,6 +413,5 @@ class CloudRedTeamEnvironment(
 
     @property
     def state(self) -> State:
-        self.st.task_id = self.t
-        self.st.sim_state = self.zz
-        return self.st
+        """Return the current environment state compliant with the OpenEnv interface."""
+        return self.env_state
