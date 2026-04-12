@@ -3,424 +3,424 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Red Team Simulator</title>
-    
-    <!-- React & ReactDOM -->
+    <title>Cloud Red Team Arena — Command Center</title>
+    <meta name="description" content="Real-time operational command center for AI-driven cloud attack simulation and evaluation">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for in-browser JSX parsing -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#0B1120',
-                        panel: '#1E293B',
-                        panelBorder: '#334155',
-                        brand: '#3B82F6',
-                        success: '#10B981',
-                        alert: '#EF4444',
-                        warning: '#F59E0B'
+                        bg: '#0a0e1a',
+                        panel: '#111827',
+                        panelBorder: '#1f2937',
+                        brand: '#3b82f6',
+                        success: '#10b981',
+                        alert: '#ef4444',
+                        warning: '#f59e0b',
+                        cyan: '#06b6d4',
+                        purple: '#a855f7',
                     },
                     fontFamily: {
-                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
                     }
                 }
             }
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; background-color: #0B1120; color: #CBD5E1; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0a0e1a; color: #94a3b8; }
+        ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748B; }
-
-        .glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); }
-        .glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.15); }
-
-        .terminal-log { animation: slideIn 0.2s ease-out forwards; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .log-entry { animation: fadeSlide 0.25s ease-out; }
+        @keyframes fadeSlide { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 8px rgba(59,130,246,0.3); } 50% { box-shadow: 0 0 20px rgba(59,130,246,0.6); } }
+        .node-active { animation: pulseGlow 2s ease-in-out infinite; }
+        .glass { background: rgba(17,24,39,0.6); backdrop-filter: blur(12px); }
     </style>
 </head>
-<body class="h-screen overflow-hidden antialiased flex flex-col">
-    <div id="root" class="h-full w-full flex flex-col"></div>
+<body class="h-screen overflow-hidden antialiased">
+<div id="root" class="h-full"></div>
+<script type="text/babel">
+const {useState, useEffect, useRef, useMemo} = React;
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+// ── Icons ──
+const Ic = {
+    Shield: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>,
+    Bolt: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
+    Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>,
+    Play: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>,
+    Pause: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>,
+    Step: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>,
+    Brain: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>,
+    Server: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>,
+    Refresh: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>,
+};
 
-        // --- Icons (using feather-icons via raw SVG for simplicity in React without bundle) ---
-        const IconActivity = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
-        const IconCheckCircle = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-        const IconAlertCircle = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-        const IconServer = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>;
-        const IconShield = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
-        const IconPlay = () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>;
-        const IconPause = () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>;
-        
-        // --- Shared Components ---
-        const Panel = ({ title, icon, children, className="" }) => (
-            <div className={`bg-panel border border-panelBorder rounded-xl flex flex-col overflow-hidden ${className}`}>
-                <div className="bg-slate-800/50 px-4 py-3 border-b border-panelBorder flex items-center gap-2 shrink-0">
-                    <span className="text-brand">{icon}</span>
-                    <h2 className="text-sm font-semibold text-slate-100 uppercase tracking-wider">{title}</h2>
-                </div>
-                <div className="p-4 flex-grow overflow-auto relative">
-                    {children}
-                </div>
+// ── Panel Component ──
+const Panel = ({title, icon, badge, children, className=""}) => (
+    <div className={`bg-panel border border-panelBorder rounded-lg flex flex-col overflow-hidden ${className}`}>
+        <div className="px-4 py-2.5 border-b border-panelBorder flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+                <span className="text-brand">{icon}</span>
+                <h2 className="text-xs font-bold text-gray-200 uppercase tracking-widest">{title}</h2>
             </div>
-        );
+            {badge}
+        </div>
+        <div className="flex-1 overflow-auto relative">{children}</div>
+    </div>
+);
 
-        const Metric = ({ label, value, subtext, colorClass="text-white" }) => (
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 flex flex-col justify-between h-full">
-                <span className="text-xs text-slate-400 font-medium">{label}</span>
-                <div className="mt-1">
-                    <div className={`text-2xl font-bold font-mono ${colorClass}`}>{value}</div>
-                    {subtext && <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-semibold">{subtext}</div>}
-                </div>
+// ── Progress Bar ──
+const Bar = ({pct, color="bg-brand"}) => (
+    <div className="w-full bg-gray-800 rounded-full h-1.5">
+        <div className={`${color} h-1.5 rounded-full transition-all duration-700`} style={{width:`${Math.max(0,Math.min(100,pct))}%`}}/>
+    </div>
+);
+
+// ── Attack Flow Definitions ──
+const FLOWS = {
+    easy: [
+        {id:'scan',  label:'Scan',      check:k=>k?.discovered_storage},
+        {id:'list',  label:'Enumerate',  check:k=>k?.found_bucket},
+        {id:'read',  label:'Extract',    check:k=>k?.read_flag},
+        {id:'patch', label:'Remediate',  check:k=>k?.patched_sensitive_bucket},
+    ],
+    medium: [
+        {id:'disc',  label:'Recon',      check:k=>k?.discovered_services},
+        {id:'ssrf',  label:'SSRF',       check:k=>k?.detected_ssrf},
+        {id:'meta',  label:'Metadata',   check:k=>k?.enumerated_iam_role},
+        {id:'iam',   label:'IAM Creds',  check:k=>k?.obtained_iam_creds},
+        {id:'sec',   label:'Secrets',    check:k=>k?.listed_secrets||k?.retrieved_secret},
+        {id:'db',    label:'Database',   check:k=>k?.accessed_db},
+    ],
+    hard: [
+        {id:'repo',  label:'Repo',       check:k=>k?.discovered_services},
+        {id:'pat',   label:'PAT',        check:k=>k?.found_leaked_token},
+        {id:'ci',    label:'CI/CD',      check:k=>k?.got_ci_token},
+        {id:'pipe',  label:'Pipeline',   check:k=>k?.modified_pipeline},
+        {id:'admin', label:'Admin Key',  check:k=>k?.got_admin_token},
+        {id:'db',    label:'Breach DB',  check:k=>k?.accessed_db},
+    ],
+    custom: [
+        {id:'init', label:'Init',    check:()=>true},
+        {id:'act',  label:'Acting',  check:k=>Object.keys(k||{}).length>0},
+        {id:'done', label:'Done',    check:k=>k?.objective_complete},
+    ],
+};
+
+// ── Attack Chain Component ──
+const AttackChain = ({task, knowledge}) => {
+    const flow = FLOWS[task] || FLOWS.custom;
+    return (
+        <div className="flex items-center w-full px-3 py-4">
+            {flow.map((node, i) => {
+                const done = node.check(knowledge);
+                const next = !done && (i===0 || flow[i-1].check(knowledge));
+                return (
+                    <div key={node.id} className="flex-1 flex flex-col items-center relative">
+                        <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center z-10 transition-all duration-500
+                            ${done ? 'border-success bg-success/20 text-success' : next ? 'border-cyan bg-cyan/10 text-cyan node-active' : 'border-gray-700 bg-gray-800/50 text-gray-600'}`}>
+                            {done ? <Ic.Check/> : next ? <Ic.Bolt/> : <div className="w-1.5 h-1.5 rounded-full bg-gray-600"/>}
+                        </div>
+                        <span className={`text-[9px] mt-1.5 font-bold uppercase tracking-wider
+                            ${done ? 'text-success' : next ? 'text-cyan' : 'text-gray-600'}`}>{node.label}</span>
+                        {i < flow.length-1 && (
+                            <div className={`absolute top-[18px] left-1/2 w-full h-[2px] -z-0 transition-colors duration-500
+                                ${done ? 'bg-success/40' : 'bg-gray-800'}`}/>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// ── Reasoning Trace Component ──
+const ReasoningPanel = ({traces}) => {
+    const latest = traces && traces.length > 0 ? traces[traces.length - 1] : null;
+    if (!latest) return (
+        <div className="p-4 text-gray-600 text-xs font-mono flex items-center gap-2">
+            <span className="animate-pulse">●</span> Waiting for agent reasoning...
+        </div>
+    );
+    return (
+        <div className="p-3 space-y-2 font-mono text-[11px]">
+            <div className="flex items-start gap-2">
+                <span className="text-purple font-bold shrink-0 w-14">[THINK]</span>
+                <span className="text-gray-300">{latest.think}</span>
             </div>
-        );
-
-        const ProgressBar = ({ progress, colorClass="bg-brand" }) => (
-            <div className="w-full bg-slate-800 rounded-full h-2 mt-2">
-                <div className={`${colorClass} h-2 rounded-full transition-all duration-500`} style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}></div>
+            <div className="flex items-start gap-2">
+                <span className="text-cyan font-bold shrink-0 w-14">[PLAN]</span>
+                <span className="text-gray-300">{latest.plan}</span>
             </div>
-        );
-
-        // --- Flows ---
-        const SCENARIO_FLOWS = {
-            easy: [
-                { id: 'storage', label: 'Scan Storage', check: k => k?.discovered_storage },
-                { id: 'bucket', label: 'List Buckets', check: k => k?.found_bucket },
-                { id: 'flag', label: 'Access Configs', check: k => k?.read_flag },
-                { id: 'patch', label: 'Patch Policy', check: k => k?.patched_sensitive_bucket }
-            ],
-            medium: [
-                { id: 'webapp', label: 'Discover WebApp', check: k => k?.discovered_services },
-                { id: 'ssrf', label: 'Exploit SSRF', check: k => k?.detected_ssrf },
-                { id: 'metadata', label: 'Metadata API', check: k => k?.enumerated_iam_role },
-                { id: 'iam', label: 'Extract IAM', check: k => k?.obtained_iam_creds },
-                { id: 'secrets', label: 'Steal Secrets', check: k => k?.listed_secrets || k?.retrieved_secret },
-                { id: 'db', label: 'Access DB', check: k => k?.accessed_db }
-            ],
-            hard: [
-                { id: 'repo', label: 'Discover Repo', check: k => k?.discovered_services },
-                { id: 'pat', label: 'Extract PAT', check: k => k?.found_leaked_token },
-                { id: 'ci', label: 'Access CI/CD', check: k => k?.got_ci_token },
-                { id: 'build', label: 'Modify Pipeline', check: k => k?.modified_pipeline },
-                { id: 'secrets', label: 'Admin Token', check: k => k?.got_admin_token },
-                { id: 'db', label: 'Breach DB', check: k => k?.accessed_db }
-            ],
-            custom: [
-                { id: 'agent', label: 'Agent Initialized', check: k => true },
-                { id: 'action', label: 'Actions Taken', check: k => Object.keys(k || {}).length > 0 },
-                { id: 'done', label: 'Simulation Complete', check: k => k?.objective_complete }
-            ]
-        };
-
-        const AttackFlow = ({ task, knowledge }) => {
-            const flow = SCENARIO_FLOWS[task] || SCENARIO_FLOWS['custom'];
-            
-            return (
-                <div className="flex items-center justify-between w-full h-full px-2 lg:px-4">
-                    {flow.map((node, idx) => {
-                        const isCompleted = node.check(knowledge);
-                        const isNext = !isCompleted && (idx === 0 || flow[idx-1].check(knowledge));
-                        
-                        let colorState = 'border-slate-700 bg-slate-800 text-slate-500';
-                        if (isCompleted) colorState = 'border-success bg-success/10 text-success glow-green';
-                        else if (isNext) colorState = 'border-brand bg-brand/10 text-brand';
-
-                        return (
-                            <div key={node.id} className="flex flex-col items-center relative flex-1">
-                                <div className={`w-8 h-8 lg:w-12 lg:h-12 rounded-full border-2 flex items-center justify-center z-10 transition-colors duration-300 bg-panel ${colorState}`}>
-                                    {isCompleted ? <IconCheckCircle /> : isNext ? <IconActivity /> : <div className="w-1 h-1 lg:w-2 lg:h-2 rounded-full bg-slate-600" />}
-                                </div>
-                                <span className={`text-[9px] lg:text-[11px] font-semibold mt-2 lg:mt-3 text-center uppercase tracking-wider ${isCompleted ? 'text-success' : isNext ? 'text-brand' : 'text-slate-500'}`}>
-                                    {node.label}
-                                </span>
-                                
-                                {idx < flow.length - 1 && (
-                                    <div className={`absolute top-4 lg:top-6 left-1/2 w-full h-[2px] -z-0 transition-colors duration-500 ${isCompleted ? 'bg-success/50' : 'bg-slate-700'}`}></div>
-                                )}
-                            </div>
-                        );
-                    })}
+            <div className="flex items-start gap-2">
+                <span className="text-success font-bold shrink-0 w-14">[ACT]</span>
+                <span className="text-gray-100 font-semibold">{latest.action}({Object.entries(latest.params||{}).map(([k,v])=>`${k}=${v}`).join(', ')})</span>
+            </div>
+            <div className="flex items-start gap-2">
+                <span className="text-warning font-bold shrink-0 w-14">[RISK]</span>
+                <span className={latest.risk?.includes('CRITICAL') ? 'text-alert' : latest.risk?.includes('HIGH') ? 'text-warning' : 'text-gray-400'}>{latest.risk}</span>
+            </div>
+            {latest.stealth_mode && (
+                <div className="mt-1 px-2 py-1 bg-warning/10 border border-warning/20 rounded text-warning text-[10px] font-bold uppercase tracking-wider">
+                    ⚠ Stealth Mode Active — Agent is prioritizing evasion
                 </div>
-            );
-        };
+            )}
+        </div>
+    );
+};
 
-        // --- Main Dashboard ---
-        const Dashboard = () => {
-            const [state, setState] = useState(null);
-            const [taskId, setTaskId] = useState('medium');
-            const [customJson, setCustomJson] = useState('{\n  "services": ["storage"]\n}');
-            const [isPlaying, setIsPlaying] = useState(false);
-            const logsEndRef = useRef(null);
+// ── Main Dashboard ──
+const Dashboard = () => {
+    const [state, setState] = useState(null);
+    const [taskId, setTaskId] = useState('medium');
+    const [customJson, setCustomJson] = useState('{\n  "services": ["storage"]\n}');
+    const [isPlaying, setIsPlaying] = useState(false);
+    const logsEnd = useRef(null);
 
-            useEffect(() => {
-                const fetchState = async () => {
-                    try {
-                        const res = await fetch('/api/ui-state');
-                        const data = await res.json();
-                        setState(data);
-                    } catch (e) {
-                        setState({ status: 'error' });
-                    }
-                };
-                fetchState();
-                const interval = setInterval(fetchState, 1000);
-                return () => clearInterval(interval);
-            }, []);
+    // Poll state
+    useEffect(() => {
+        const poll = () => fetch('/api/ui-state').then(r=>r.json()).then(setState).catch(()=>setState({status:'error'}));
+        poll();
+        const id = setInterval(poll, 800);
+        return () => clearInterval(id);
+    }, []);
 
-            useEffect(() => {
-                if (!isPlaying) return;
-                const interval = setInterval(() => {
-                    fetch('/api/run-step', { method: 'POST' })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.status === 'error') {
-                                console.error(data.message);
-                                alert("Engine Error: " + data.message);
-                                setIsPlaying(false);
-                            } else if (data.status === 'done') {
-                                setIsPlaying(false);
-                            }
-                        })
-                        .catch(() => setIsPlaying(false));
-                }, 1500); // Poll agent step every 1.5s
-                return () => clearInterval(interval);
-            }, [isPlaying]);
+    // Auto-run agent
+    useEffect(() => {
+        if (!isPlaying) return;
+        const id = setInterval(() => {
+            fetch('/api/run-step', {method:'POST'}).then(r=>r.json()).then(d => {
+                if (d.status === 'done' || d.status === 'error') setIsPlaying(false);
+            }).catch(() => setIsPlaying(false));
+        }, 1200);
+        return () => clearInterval(id);
+    }, [isPlaying]);
 
-            useEffect(() => {
-                if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            }, [state?.sim_state?.logs?.length]);
+    // Auto-scroll logs
+    useEffect(() => {
+        if (logsEnd.current) logsEnd.current.scrollIntoView({behavior:'smooth'});
+    }, [state?.sim_state?.logs?.length]);
 
-            const handleDeploy = async () => {
-                setIsPlaying(false);
-                let promise;
-                if (taskId === 'custom') {
-                    try {
-                        const parsed = JSON.parse(customJson);
-                        promise = fetch('/api/deploy-custom', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ scenario: parsed })
-                        });
-                    } catch (e) {
-                        alert("Invalid Custom JSON"); return;
-                    }
-                } else {
-                    promise = fetch('/api/reset', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ task_id: taskId })
-                    });
-                    // Fallback to core openenv API endpoint if api/reset undefined locally
-                    fetch('/reset', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ task_id: taskId })
-                    }).catch(console.error);
-                }
-            };
+    const handleDeploy = () => {
+        setIsPlaying(false);
+        if (taskId === 'custom') {
+            try {
+                const parsed = JSON.parse(customJson);
+                fetch('/api/deploy-custom', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({scenario:parsed})});
+            } catch { alert("Invalid JSON"); }
+        } else {
+            fetch('/reset', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({task_id:taskId})}).catch(console.error);
+        }
+        // Reset agent memory
+        try { fetch('/api/run-step', {method:'POST'}); } catch {}
+    };
 
-            const isOnline = state?.status === 'online';
-            const sim = state?.sim_state || {};
-            const limits = sim.limits || { budget: 20 };
-            const budgetRem = sim.budget_remaining || 0;
-            const alerts = sim.alerts_triggered || 0;
-            const knowledge = sim.agent_knowledge || {};
-            const logs = sim.logs || [];
-            
-            const taskActive = state?.task || 'easy';
-            const flow = SCENARIO_FLOWS[taskActive] || SCENARIO_FLOWS['custom'];
-            const completedNodes = flow.filter(n => n.check(knowledge)).length;
-            const successProgress = (completedNodes / flow.length) * 100;
-            const stealthScore = Math.max(0, 100 - (alerts * 20));
-            const efficiencyScore = Math.max(0, (budgetRem / Math.max(1, limits.budget)) * 100);
+    const handleSingleStep = () => {
+        fetch('/api/run-step', {method:'POST'}).then(r=>r.json()).then(d => {
+            if (d.status === 'done') alert('Simulation complete');
+        }).catch(console.error);
+    };
 
-            return (
-                <div className="flex flex-col h-full w-full">
-                    {/* Header */}
-                    <header className="bg-panel border-b border-panelBorder px-6 lg:px-8 py-4 flex items-center justify-between shrink-0 shadow-lg z-20">
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-brand/10 rounded-lg"><IconShield className="text-brand"/></div>
-                                <div>
-                                    <h1 className="text-lg lg:text-xl font-bold tracking-tight text-white leading-none">Cloud Red Team <span className="text-brand font-normal">Arena</span></h1>
-                                    <div className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Powered by OpenEnv</div>
-                                </div>
-                            </div>
-                            <div className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 uppercase tracking-wide ${isOnline ? 'bg-success/10 text-success border border-success/20 glow-green' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
-                                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-success animate-pulse' : 'bg-slate-500'}`}></div>
-                                {isOnline ? 'SIMULATION ACTIVE' : 'OFFLINE'}
-                            </div>
+    const online = state?.status === 'online';
+    const sim = state?.sim_state || {};
+    const lim = sim.limits || {budget:20};
+    const budget = sim.budget_remaining || 0;
+    const alerts = sim.alerts_triggered || 0;
+    const knowledge = sim.agent_knowledge || {};
+    const logs = sim.logs || [];
+    const traces = state?.reasoning_traces || [];
+    const taskNow = state?.task || taskId;
+    const flow = FLOWS[taskNow] || FLOWS.custom;
+    const done = flow.filter(n=>n.check(knowledge)).length;
+    const progress = (done/flow.length)*100;
+    const stealth = Math.max(0, 100-(alerts*20));
+    const efficiency = Math.max(0, (budget/Math.max(1,lim.budget))*100);
+
+    return (
+        <div className="h-full flex flex-col">
+            {/* ── Header ── */}
+            <header className="glass border-b border-panelBorder px-5 py-3 flex items-center justify-between shrink-0 z-30">
+                <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-brand/10 rounded-md border border-brand/20"><Ic.Shield/></div>
+                        <div>
+                            <h1 className="text-base font-extrabold text-white tracking-tight">Cloud Red Team <span className="text-brand font-medium">Arena</span></h1>
+                            <div className="text-[9px] text-gray-500 uppercase tracking-[0.2em] font-medium">Operational Command Center</div>
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                            <select 
-                                className="bg-slate-900 border border-slate-700 text-sm font-medium rounded-lg px-3 py-2.5 text-slate-200 outline-none focus:border-brand transition-colors cursor-pointer"
-                                value={taskId} 
-                                onChange={(e) => setTaskId(e.target.value)}
-                            >
-                                <option value="easy">Scenario: Easy Task</option>
-                                <option value="medium">Scenario: Medium Task</option>
-                                <option value="hard">Scenario: Hard Task</option>
-                                <option value="custom">Scenario: Custom JSON</option>
-                            </select>
-                            <button 
-                                onClick={handleDeploy}
-                                className="bg-brand hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-brand/20 active:scale-95"
-                            >
-                                <IconActivity /> Deploy Mission
-                            </button>
-                            <button 
-                                onClick={() => setIsPlaying(!isPlaying)}
-                                className={`${isPlaying ? 'bg-warning hover:bg-yellow-600 outline outline-2 outline-offset-2 outline-warning/50' : 'bg-success hover:bg-emerald-600'} text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 shadow-lg active:scale-95`}
-                            >
-                                {isPlaying ? <IconPause /> : <IconPlay />} {isPlaying ? 'PAUSE AGENT' : 'RUN AGENT'}
-                            </button>
-                        </div>
-                    </header>
-
-                    {/* Main Content Viewport */}
-                    <div className="flex-1 overflow-hidden p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-[#0B1120]">
-                        
-                        {/* Left Side: Dashboards & Flow */}
-                        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6 overflow-y-auto pr-2 pb-6">
-                            
-                            {/* Setup panel for custom JSON if needed */}
-                            {taskId === 'custom' && (
-                                <Panel title="Custom Scenario Payload Configuration" icon={<IconServer />} className="shrink-0">
-                                    <textarea 
-                                        className="w-full h-32 bg-[#010409] border border-slate-700 rounded-lg text-xs font-mono p-4 text-slate-300 outline-none focus:border-brand focus:ring-1 focus:ring-brand shadow-inner"
-                                        value={customJson}
-                                        onChange={(e) => setCustomJson(e.target.value)}
-                                        placeholder="Enter custom environment configuration..."
-                                    />
-                                </Panel>
-                            )}
-
-                            {/* Attack Flow Visualization */}
-                            <Panel title="Live Extraction Chain" icon={<IconActivity />} className="shrink-0 h-40 flex items-center justify-center">
-                                <AttackFlow task={taskActive} knowledge={knowledge} />
-                            </Panel>
-
-                            {/* Metrics Grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
-                                <Metric label="Task Objective" value={`${completedNodes}/${flow.length}`} subtext="Subtasks Complete" colorClass="text-white" />
-                                <Metric label="Budget Remaining" value={budgetRem} subtext={`/ ${limits.budget} total budget`} colorClass={budgetRem < 5 ? 'text-warning' : 'text-white'} />
-                                <Metric label="Alerts Triggered" value={alerts} subtext={alerts >= 3 ? "Containment Active" : "Undetected"} colorClass={alerts > 0 ? 'text-alert glow-red text-shadow' : 'text-success'} />
-                                <Metric label="Current Step" value={state?.step || 0} subtext="Agent executions" colorClass="text-brand" />
-                            </div>
-
-                            {/* Environment State Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-[300px]">
-                                <Panel title="Security Posture Analytics" icon={<IconShield />}>
-                                    <div className="space-y-6 pt-2">
-                                        <div>
-                                            <div className="flex justify-between text-sm mb-2 font-medium">
-                                                <span className="text-slate-300">Stealth Effectiveness</span>
-                                                <span className={stealthScore > 50 ? 'text-success' : 'text-alert'}>{stealthScore}%</span>
-                                            </div>
-                                            <ProgressBar progress={stealthScore} colorClass={stealthScore > 50 ? 'bg-success' : 'bg-alert'} />
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-sm mb-2 font-medium">
-                                                <span className="text-slate-300">Operational Efficiency</span>
-                                                <span className="text-brand">{efficiencyScore.toFixed(0)}%</span>
-                                            </div>
-                                            <ProgressBar progress={efficiencyScore} colorClass="bg-brand" />
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-sm mb-2 font-medium">
-                                                <span className="text-slate-300">Objective Progress</span>
-                                                <span className="text-success">{successProgress.toFixed(0)}%</span>
-                                            </div>
-                                            <ProgressBar progress={successProgress} colorClass="bg-success" />
-                                        </div>
-                                        
-                                        <div className="mt-8 bg-slate-900/50 rounded-lg p-4 border border-slate-700/50 shadow-inner">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Active Privilege</span>
-                                                <div className={`px-3 py-1 text-xs font-bold rounded-lg uppercase tracking-wider ${sim.access_level === 'admin' ? 'bg-alert/20 text-alert border border-alert/30 glow-red' : sim.access_level === 'user' ? 'bg-brand/20 text-brand border border-brand/30 glow-blue' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                                                    {sim.access_level || 'NONE'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Panel>
-                                
-                                <Panel title="Extracted Data Vault" icon={<IconServer />}>
-                                    {Object.keys(knowledge).length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                                            <IconServer className="w-12 h-12 mb-3 opacity-20" />
-                                            <p className="text-sm font-medium">No intel extracted yet.</p>
-                                        </div>
-                                    ) : (
-                                        <pre className="font-mono text-[11px] leading-relaxed text-brand whitespace-pre-wrap word-break bg-[#010409] p-4 rounded-lg border border-slate-800 h-full overflow-auto">
-                                            {JSON.stringify(knowledge, null, 2)}
-                                        </pre>
-                                    )}
-                                </Panel>
-                            </div>
-                        </div>
-
-                        {/* Right Side: Terminal Logs */}
-                        <div className="lg:col-span-5 xl:col-span-4 h-full flex flex-col pb-6">
-                            <Panel title="Action Trajectory System" icon={<IconServer />} className="flex-1 shadow-xl">
-                                <div className="absolute inset-0 bg-[#060913] p-5 overflow-y-auto font-mono text-[13px] leading-[1.6]">
-                                    {logs.length === 0 ? (
-                                        <div className="text-slate-600 flex items-center gap-2 mt-2">
-                                            <span className="animate-ping w-2 h-2 bg-slate-600 rounded-full inline-block"></span> 
-                                            System initialized. Awaiting agent execution sequence...
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-1.5 pb-8">
-                                            {logs.map((log, i) => {
-                                                let style = "text-slate-400";
-                                                let prefix = "";
-                                                if (log.includes("[!]")) {
-                                                    style = "text-alert font-medium bg-alert/5 px-2 py-1 rounded border-l-2 border-alert";
-                                                } else if (log.includes("[-]")) {
-                                                    style = "text-warning font-medium";
-                                                } else if (log.includes("[+]")) {
-                                                    style = "text-success font-medium";
-                                                } else if (log.includes("[i]")) {
-                                                    style = "text-brand";
-                                                } else if (log.includes("[*]")) {
-                                                    style = "text-brand/80";
-                                                }
-                                                return <div key={i} className={`terminal-log ${style}`}>{log}</div>;
-                                            })}
-                                            <div ref={logsEndRef} className="h-4" />
-                                        </div>
-                                    )}
-                                </div>
-                            </Panel>
-                        </div>
-
+                    </div>
+                    <div className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1.5 uppercase tracking-wider border
+                        ${online ? 'bg-success/10 text-success border-success/20' : 'bg-gray-800 text-gray-500 border-gray-700'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-success animate-pulse' : 'bg-gray-600'}`}/>
+                        {online ? 'ACTIVE' : 'OFFLINE'}
                     </div>
                 </div>
-            );
-        };
+                <div className="flex items-center gap-2">
+                    <select className="bg-gray-900 border border-gray-700 text-xs font-medium rounded px-2.5 py-2 text-gray-300 outline-none focus:border-brand cursor-pointer"
+                        value={taskId} onChange={e=>setTaskId(e.target.value)}>
+                        <option value="easy">Easy: S3 Misconfiguration</option>
+                        <option value="medium">Medium: SSRF → IAM Chain</option>
+                        <option value="hard">Hard: CI/CD Supply Chain</option>
+                        <option value="custom">Custom JSON Scenario</option>
+                    </select>
+                    <button onClick={handleDeploy} className="bg-brand hover:bg-blue-600 text-white px-3.5 py-2 rounded text-xs font-bold transition-colors flex items-center gap-1.5 shadow-lg shadow-brand/20">
+                        <Ic.Refresh/> DEPLOY
+                    </button>
+                    <button onClick={handleSingleStep} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded text-xs font-bold transition-colors flex items-center gap-1.5 border border-gray-700">
+                        <Ic.Step/> STEP
+                    </button>
+                    <button onClick={()=>setIsPlaying(!isPlaying)}
+                        className={`${isPlaying ? 'bg-warning hover:bg-yellow-600 ring-2 ring-warning/30' : 'bg-success hover:bg-emerald-600'}
+                        text-white px-3.5 py-2 rounded text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg`}>
+                        {isPlaying ? <><Ic.Pause/> PAUSE</> : <><Ic.Play/> AUTO RUN</>}
+                    </button>
+                </div>
+            </header>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Dashboard />);
-    </script>
+            {/* ── Body ── */}
+            <div className="flex-1 overflow-hidden grid grid-cols-12 gap-3 p-3">
+
+                {/* Left Column: Chain + Metrics + Analytics + Vault */}
+                <div className="col-span-5 flex flex-col gap-3 overflow-y-auto pr-1">
+
+                    {taskId === 'custom' && (
+                        <Panel title="Custom Payload" icon={<Ic.Server/>}>
+                            <textarea className="w-full h-20 bg-[#060910] border border-gray-800 rounded text-[11px] font-mono p-3 text-gray-300 outline-none focus:border-brand m-3"
+                                value={customJson} onChange={e=>setCustomJson(e.target.value)}/>
+                        </Panel>
+                    )}
+
+                    <Panel title="Kill Chain Progression" icon={<Ic.Bolt/>}
+                        badge={<span className="text-[10px] font-mono font-bold text-brand">{done}/{flow.length}</span>}>
+                        <AttackChain task={taskNow} knowledge={knowledge}/>
+                    </Panel>
+
+                    {/* Metrics */}
+                    <div className="grid grid-cols-4 gap-2 shrink-0">
+                        {[
+                            {l:'Steps', v:state?.step||0, c:'text-brand'},
+                            {l:'Budget', v:budget, c:budget<4?'text-alert':'text-white', sub:`/ ${lim.budget}`},
+                            {l:'Alerts', v:alerts, c:alerts>0?'text-alert':'text-success', sub:alerts>=3?'CONTAINED':''},
+                            {l:'Progress', v:`${progress.toFixed(0)}%`, c:'text-success'},
+                        ].map(m => (
+                            <div key={m.l} className="bg-gray-900/50 border border-gray-800/50 rounded-lg p-2.5">
+                                <div className="text-[9px] text-gray-500 font-semibold uppercase tracking-wider">{m.l}</div>
+                                <div className={`text-lg font-bold font-mono mt-0.5 ${m.c}`}>{m.v}</div>
+                                {m.sub && <div className="text-[9px] text-gray-600 mt-0.5">{m.sub}</div>}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Security Posture */}
+                    <Panel title="Security Posture" icon={<Ic.Shield/>}>
+                        <div className="p-3 space-y-4">
+                            {[
+                                {l:'Stealth', v:stealth, c:stealth>50?'bg-success':'bg-alert'},
+                                {l:'Efficiency', v:efficiency, c:'bg-brand'},
+                                {l:'Objective', v:progress, c:'bg-cyan'},
+                            ].map(b => (
+                                <div key={b.l}>
+                                    <div className="flex justify-between text-[11px] mb-1.5 font-medium">
+                                        <span className="text-gray-400">{b.l}</span>
+                                        <span className={b.v>50?'text-gray-300':'text-alert'}>{b.v.toFixed(0)}%</span>
+                                    </div>
+                                    <Bar pct={b.v} color={b.c}/>
+                                </div>
+                            ))}
+                            <div className="mt-4 flex justify-between items-center bg-gray-900/50 p-2.5 rounded border border-gray-800/50">
+                                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Privilege</span>
+                                <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider
+                                    ${sim.access_level==='admin'?'bg-alert/15 text-alert border border-alert/20':
+                                      sim.access_level==='user'?'bg-brand/15 text-brand border border-brand/20':
+                                      'bg-gray-800 text-gray-500 border border-gray-700'}`}>
+                                    {sim.access_level||'NONE'}
+                                </span>
+                            </div>
+                        </div>
+                    </Panel>
+
+                    {/* Data Vault */}
+                    <Panel title="Intelligence Vault" icon={<Ic.Server/>} className="min-h-[120px]">
+                        {Object.keys(knowledge).length === 0 ? (
+                            <div className="p-4 text-center text-gray-600 text-xs">No extracted intelligence</div>
+                        ) : (
+                            <pre className="font-mono text-[10px] leading-relaxed text-cyan p-3 whitespace-pre-wrap break-all">
+                                {JSON.stringify(knowledge, null, 2)}
+                            </pre>
+                        )}
+                    </Panel>
+                </div>
+
+                {/* Center Column: Reasoning Panel */}
+                <div className="col-span-3 flex flex-col gap-3">
+                    <Panel title="Agent Reasoning" icon={<Ic.Brain/>} className="flex-1"
+                        badge={traces.length > 0 ? <span className="text-[9px] px-1.5 py-0.5 bg-purple/10 text-purple rounded font-bold">STEP {traces[traces.length-1]?.step}</span> : null}>
+                        <ReasoningPanel traces={traces}/>
+                        {traces.length > 1 && (
+                            <div className="border-t border-panelBorder p-2">
+                                <div className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold mb-2">Reasoning History</div>
+                                <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+                                    {[...traces].reverse().slice(1, 8).map((t, i) => (
+                                        <div key={i} className="text-[10px] font-mono bg-gray-900/50 p-2 rounded border border-gray-800/30">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-gray-600">Step {t.step}</span>
+                                                <span className="text-success font-semibold">{t.action}</span>
+                                                {t.stealth_mode && <span className="text-warning text-[8px]">⚠ STEALTH</span>}
+                                            </div>
+                                            <div className="text-gray-500 truncate">{t.think}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </Panel>
+                </div>
+
+                {/* Right Column: Action Logs */}
+                <div className="col-span-4 flex flex-col gap-3">
+                    <Panel title="Action Trajectory" icon={<Ic.Server/>} className="flex-1"
+                        badge={<span className="text-[9px] font-mono text-gray-600">{logs.length} events</span>}>
+                        <div className="absolute inset-0 bg-[#060910] p-3 overflow-y-auto font-mono text-[12px] leading-[1.7]">
+                            {logs.length === 0 ? (
+                                <div className="text-gray-700 flex items-center gap-2 mt-1">
+                                    <span className="animate-ping w-1.5 h-1.5 bg-gray-700 rounded-full inline-block"/>
+                                    Awaiting agent execution...
+                                </div>
+                            ) : (
+                                <div className="space-y-0.5 pb-6">
+                                    {logs.map((log, i) => {
+                                        let s = "text-gray-500";
+                                        if (log.includes("[!]")) s = "text-alert font-medium bg-alert/5 px-1.5 py-0.5 rounded border-l-2 border-alert";
+                                        else if (log.includes("[-]")) s = "text-warning";
+                                        else if (log.includes("[+]")) s = "text-success";
+                                        else if (log.includes("[i]")) s = "text-brand";
+                                        else if (log.includes("[THINK]")) s = "text-purple";
+                                        else if (log.includes("[PLAN]")) s = "text-cyan";
+                                        else if (log.includes("[ACT]")) s = "text-success font-semibold";
+                                        else if (log.includes("[RISK]")) s = "text-warning";
+                                        else if (log.includes("[MODE]")) s = "text-warning font-bold";
+                                        return <div key={i} className={`log-entry ${s}`}>{log}</div>;
+                                    })}
+                                    <div ref={logsEnd} className="h-2"/>
+                                </div>
+                            )}
+                        </div>
+                    </Panel>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard/>);
+</script>
 </body>
 </html>
