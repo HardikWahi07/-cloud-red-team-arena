@@ -393,7 +393,9 @@ class CloudRedTeamEnvironment(
         o = self._o(q=q)
         o.reward = z
         o.done = d
-        return o@property
+        return o
+
+    @property
     def state(self) -> State:
         self.st.task_id = self.t
         self.st.sim_state = self.zz
