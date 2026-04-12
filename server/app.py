@@ -91,19 +91,22 @@ async def run_step():
         if root_dir not in sys.path:
             sys.path.insert(0, root_dir)
         from inference import heuristic_action
+
+        # Build a rich observation with FULL context so the heuristic agent
+        # can parse role names, secret values, and prior state from logs
         obs = env._o().model_dump()
-        
-        # Inject the most recent logs from the environment so the heuristic agent can read them
-        if hasattr(env, "zz") and "logs" in env.zz:
-            # Get logs from the last step by grabbing recent entries
-            # heuristic_action expects obs["logs"] to have the immediate feedback
-            obs["logs"] = env.zz["logs"][-5:]
-            
+        obs["agent_knowledge"] = dict(env.zz.get("agent_knowledge", {}))
+        obs["logs"] = list(env.zz.get("logs", []))  # full history, not truncated
+
         act_dict = heuristic_action(env.t, env.st.step_count + 1, obs)
         action = CloudRedTeamAction(action=act_dict["action"], params=act_dict.get("params", {}))
-        env.step(action)
-        return {"status": "ok", "action": act_dict["action"]}
+        result = env.step(action)
+
+        is_done = bool(result.done)
+        return {"status": "done" if is_done else "ok", "action": act_dict["action"]}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "message": str(e)}
 
 
