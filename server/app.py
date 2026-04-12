@@ -97,7 +97,7 @@ def ui_state():
         "status": "online",
         "task": env.task_id,
         "step": env.env_state.step_count,
-        "sim_state": env.state,
+        "sim_state": env.sim_data,
         "reasoning_traces": traces[-10:],  # Last 10 traces for UI
     }
 
@@ -117,11 +117,11 @@ async def deploy_custom(req: Request):
     payload = await req.json()
     scenario = payload.get("scenario", {})
     env.task_id = "custom"
-    env.state = scenario
-    env.state["access_level"] = "none"
-    env.state["alerts_triggered"] = 0
-    env.state["budget_remaining"] = int((env.state.get("limits", {}) or {}).get("budget") or 20)
-    env.state["rate_counters"] = {}
+    env.sim_data = scenario
+    env.sim_data["access_level"] = "none"
+    env.sim_data["alerts_triggered"] = 0
+    env.sim_data["budget_remaining"] = int((env.sim_data.get("limits", {}) or {}).get("budget") or 20)
+    env.sim_data["rate_counters"] = {}
     from .grader import get_grader
     from uuid import uuid4
     from openenv.core.env_server.types import State
@@ -146,11 +146,11 @@ async def run_step():
     from .environment import get_active_env
     from .models import CloudRedTeamAction
     env = get_active_env()
-    if not env or not env.state:
+    if not env or not env.sim_data:
         return {"status": "error", "message": "Environment not initialized"}
 
     # Check termination conditions
-    if env.env_state.step_count >= 10 or env.state.get("agent_knowledge", {}).get("objective_complete"):
+    if env.env_state.step_count >= 10 or env.sim_data.get("agent_knowledge", {}).get("objective_complete"):
         return {"status": "done"}
 
     try:
@@ -162,11 +162,11 @@ async def run_step():
 
         # Build observation with full context
         obs = env._o().model_dump()
-        obs["agent_knowledge"] = dict(env.state.get("agent_knowledge", {}))
-        obs["logs"] = list(env.state.get("logs", []))
-        obs["alerts_triggered"] = env.state.get("alerts_triggered", 0)
-        obs["budget_remaining"] = env.state.get("budget_remaining", 0)
-        obs["limits"] = env.state.get("limits", {})
+        obs["agent_knowledge"] = dict(env.sim_data.get("agent_knowledge", {}))
+        obs["logs"] = list(env.sim_data.get("logs", []))
+        obs["alerts_triggered"] = env.sim_data.get("alerts_triggered", 0)
+        obs["budget_remaining"] = env.sim_data.get("budget_remaining", 0)
+        obs["limits"] = env.sim_data.get("limits", {})
 
         act_dict = heuristic_action(env.task_id, env.env_state.step_count + 1, obs)
 
