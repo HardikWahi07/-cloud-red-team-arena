@@ -68,6 +68,8 @@
         const IconAlertCircle = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
         const IconServer = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>;
         const IconShield = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
+        const IconPlay = () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>;
+        const IconPause = () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>;
         
         // --- Shared Components ---
         const Panel = ({ title, icon, children, className="" }) => (
@@ -164,8 +166,9 @@
         // --- Main Dashboard ---
         const Dashboard = () => {
             const [state, setState] = useState(null);
-            const [taskId, setTaskId] = useState('easy');
+            const [taskId, setTaskId] = useState('medium');
             const [customJson, setCustomJson] = useState('{\n  "services": ["storage"]\n}');
+            const [isPlaying, setIsPlaying] = useState(false);
             const logsEndRef = useRef(null);
 
             useEffect(() => {
@@ -184,10 +187,26 @@
             }, []);
 
             useEffect(() => {
+                if (!isPlaying) return;
+                const interval = setInterval(() => {
+                    fetch('/api/run-step', { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'done' || data.status === 'error') {
+                                setIsPlaying(false);
+                            }
+                        })
+                        .catch(() => setIsPlaying(false));
+                }, 1500); // Poll agent step every 1.5s
+                return () => clearInterval(interval);
+            }, [isPlaying]);
+
+            useEffect(() => {
                 if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
             }, [state?.sim_state?.logs?.length]);
 
             const handleDeploy = async () => {
+                setIsPlaying(false);
                 let promise;
                 if (taskId === 'custom') {
                     try {
@@ -264,6 +283,12 @@
                                 className="bg-brand hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-brand/20 active:scale-95"
                             >
                                 <IconActivity /> Deploy Mission
+                            </button>
+                            <button 
+                                onClick={() => setIsPlaying(!isPlaying)}
+                                className={`${isPlaying ? 'bg-warning hover:bg-yellow-600 outline outline-2 outline-offset-2 outline-warning/50' : 'bg-success hover:bg-emerald-600'} text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 shadow-lg active:scale-95`}
+                            >
+                                {isPlaying ? <IconPause /> : <IconPlay />} {isPlaying ? 'PAUSE AGENT' : 'RUN AGENT'}
                             </button>
                         </div>
                     </header>

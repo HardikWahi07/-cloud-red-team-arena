@@ -24,7 +24,7 @@ def info():
         "env": "CloudRedTeamArena",
         "version": "1.0.0",
         "tasks": ["easy", "medium", "hard", "custom"],
-        "endpoints": ["/", "/api/info", "/reset", "/step", "/state", "/ws", "/dashboard", "/api/ui-state", "/api/deploy-custom"],
+        "endpoints": ["/", "/api/info", "/reset", "/step", "/state", "/ws", "/dashboard", "/api/ui-state", "/api/deploy-custom", "/api/run-step"],
     }
 
 from fastapi.responses import HTMLResponse
@@ -72,6 +72,28 @@ async def deploy_custom(req: Request):
     env.st = State(episode_id=str(uuid4()), step_count=0, task_id="custom")
     env._l("[+] Custom Environment deployed manually")
     return {"status": "ok"}
+
+@app.post("/api/run-step")
+async def run_step():
+    from .environment import get_active_env
+    from .models import CloudRedTeamAction
+    env = get_active_env()
+    if not env or not env.zz:
+        return {"status": "error", "message": "Environment off"}
+    
+    # Check if already done
+    if env.st.step_count >= 10 or env.zz.get("agent_knowledge", {}).get("objective_complete"):
+        return {"status": "done"}
+        
+    try:
+        from inference import heuristic_action
+        obs = env._o().model_dump()
+        act_dict = heuristic_action(env.t, env.st.step_count + 1, obs)
+        action = CloudRedTeamAction(action=act_dict["action"], params=act_dict.get("params", {}))
+        env.step(action)
+        return {"status": "ok", "action": act_dict["action"]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):
