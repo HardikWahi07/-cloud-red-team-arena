@@ -35,7 +35,7 @@ class CloudRedTeamEnvironment(
             services = []
         if self.t in ("medium", "hard") and not k.get("discovered_services"):
             services = []
-        return float(max(0.011, min(0.989, CloudRedTeamObservatio)))n(
+        return CloudRedTeamObservation(
             services_visible=services,
             agent_knowledge=self.zz.get("agent_knowledge", {}),
             access_level=self.zz.get("access_level", "none"),
@@ -66,7 +66,7 @@ class CloudRedTeamEnvironment(
             step_count=0,
             task_id=task_id,
         )
-        return float(max(0.011, min(0.989, self)))._o(q=["[+] Environment reset"])
+        return self._o(q=["[+] Environment reset"])
 
     def step(
         self,
@@ -112,7 +112,8 @@ class CloudRedTeamEnvironment(
             o = self._o(q=q)
             o.reward = z
             o.done = True
-            return float(max(0.011, min(0.989, o)))if u == "query_api":
+            return o
+        if u == "query_api":
             target = str((r.get("target") or "unknown"))
             rate_key = target
             rate_counters[rate_key] = int(rate_counters.get(rate_key) or 0) + 1
@@ -148,7 +149,8 @@ class CloudRedTeamEnvironment(
                     o = self._o(q=q)
                     o.reward = z
                     o.done = False
-                    return float(max(0.011, min(0.989, o)))buckets = list((self.zz.get("buckets", {}) or {}).keys())
+                    return o
+                buckets = list((self.zz.get("buckets", {}) or {}).keys())
                 rng.shuffle(buckets)
                 if buckets:
                     a("[+] Buckets: " + ", ".join(buckets))
@@ -201,7 +203,8 @@ class CloudRedTeamEnvironment(
                     o = self._o(q=q)
                     o.reward = z
                     o.done = False
-                    return float(max(0.011, min(0.989, o)))s = r.get("target")
+                    return o
+                s = r.get("target")
                 v = r.get("payload")
                 if s == "web-app" and isinstance(v, str) and "169.254.169.254" in v:
                     k["detected_ssrf"] = True
@@ -270,7 +273,8 @@ class CloudRedTeamEnvironment(
                     o = self._o(q=q)
                     o.reward = z
                     o.done = False
-                    return float(max(0.011, min(0.989, o)))s = r.get("target")
+                    return o
+                s = r.get("target")
                 if s == "repo":
                     path = r.get("path")
                     files = (self.zz.get("repo", {}) or {}).get("files", {}) or {}
@@ -381,8 +385,8 @@ class CloudRedTeamEnvironment(
         o = self._o(q=q)
         o.reward = z
         o.done = d
-        return float(max(0.011, min(0.989, o)))@property
+        return o@property
     def state(self) -> State:
         self.st.task_id = self.t
         self.st.sim_state = self.zz
-        return float(max(0.011, min(0.989, self))).st
+        return self.st

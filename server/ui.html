@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Red Team Arena | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: rgba(22, 27, 34, 0.7);
+            --border: #30363d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --accent-yellow: #d29922;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(88, 166, 255, 0.05) 0%, transparent 50%),
+                              radial-gradient(circle at 85% 30%, rgba(248, 81, 73, 0.05) 0%, transparent 50%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2rem;
+            margin: 0;
+            background: -webkit-linear-gradient(45deg, var(--accent-blue), #bc8cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(88, 166, 255, 0.1);
+            color: var(--accent-blue);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .offline {
+            background: rgba(139, 148, 158, 0.1);
+            color: var(--text-muted);
+            border: 1px solid rgba(139, 148, 158, 0.2);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #log-container {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            background: #010409;
+            border-radius: 8px;
+            padding: 1rem;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .log-line {
+            padding: 0.2rem 0;
+            line-height: 1.4;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-info { color: var(--accent-blue); }
+        .log-success { color: var(--accent-green); }
+        .log-warning { color: var(--accent-yellow); }
+        .log-error { color: var(--accent-red); font-weight: bold; }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        select, button {
+            background: #21262d;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover, select:hover {
+            background: #30363d;
+            border-color: #8b949e;
+        }
+        
+        button.primary {
+            background: var(--accent-green);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+        }
+        button.primary:hover {
+            background: #2ea043;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: #21262d;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-blue);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🛡️ Cloud Red Team Arena</h1>
+        <div id="connection-status" class="status-badge offline">Simulation Offline</div>
+    </header>
+
+    <main>
+        <div class="left-column" style="display: flex; flex-direction: column; gap: 2rem;">
+            
+            <section class="panel">
+                <h2>📊 Scenario Metrics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Current Task</span>
+                        <span class="metric-value" id="val-task" style="color: var(--accent-blue)">n/a</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Step Count</span>
+                        <span class="metric-value" id="val-step">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Budget Remaining</span>
+                        <span class="metric-value" id="val-budget">0</span>
+                        <div class="progress-bar-container"><div id="budget-bar" class="progress-bar"></div></div>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Alerts Triggered</span>
+                        <span class="metric-value" id="val-alerts" style="color: var(--accent-red)">0</span>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <select id="task-selector">
+                        <option value="easy">Easy Task</option>
+                        <option value="medium">Medium Task</option>
+                        <option value="hard">Hard Task</option>
+                    </select>
+                    <button class="primary" onclick="resetEnv()">Reset Arena</button>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h2>🧠 Agent Knowledge</h2>
+                <div id="knowledge-container" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 6px; height: 120px; overflow-y: auto;">
+                    { waiting for agent... }
+                </div>
+            </section>
+
+        </div>
+
+        <section class="panel">
+            <h2>📡 Live Action Logs</h2>
+            <div id="log-container">
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = window.location.origin;
+        let lastLogCount = 0;
+
+        function formatLogLine(line) {
+            if(line.includes('[!]')) return `<span class="log-error">${line}</span>`;
+            if(line.includes('[-]')) return `<span class="log-warning">${line}</span>`;
+            if(line.includes('[+]')) return `<span class="log-success">${line}</span>`;
+            return `<span class="log-info">${line}</span>`;
+        }
+
+        async function fetchState() {
+            try {
+                const res = await fetch(`${API_URL}/api/ui-state`);
+                const data = await res.json();
+
+                const statusBadge = document.getElementById('connection-status');
+                if (data.status === 'online') {
+                    statusBadge.textContent = 'Simulation Online';
+                    statusBadge.className = 'status-badge';
+                    
+                    document.getElementById('val-task').textContent = data.task.toUpperCase();
+                    document.getElementById('val-step').textContent = data.step;
+                    
+                    const budget = data.sim_state.budget_remaining || 0;
+                    const maxBudget = data.sim_state.limits?.budget || 20;
+                    document.getElementById('val-budget').textContent = budget;
+                    document.getElementById('budget-bar').style.width = `${Math.max(0, (budget/maxBudget)*100)}%`;
+                    
+                    document.getElementById('val-alerts').textContent = data.sim_state.alerts_triggered || 0;
+
+                    document.getElementById('knowledge-container').innerHTML = `<pre style="margin:0">${JSON.stringify(data.sim_state.agent_knowledge || {}, null, 2)}</pre>`;
+
+                    const logs = data.sim_state.logs || [];
+                    if (logs.length !== lastLogCount) {
+                        const logContainer = document.getElementById('log-container');
+                        logContainer.innerHTML = '';
+                        logs.forEach(log => {
+                            logContainer.innerHTML += `<div class="log-line">${formatLogLine(log)}</div>`;
+                        });
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                        lastLogCount = logs.length;
+                    }
+
+                } else {
+                    statusBadge.textContent = 'Simulation Offline';
+                    statusBadge.className = 'status-badge offline';
+                }
+            } catch (e) {
+                console.error("Failed to fetch UI state:", e);
+                const statusBadge = document.getElementById('connection-status');
+                statusBadge.textContent = 'Disconnected';
+                statusBadge.className = 'status-badge offline';
+            }
+        }
+
+        async function resetEnv() {
+            const task = document.getElementById('task-selector').value;
+            fetch(`${API_URL}/reset`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task_id: task })
+            }).then(() => { fetchState(); });
+            lastLogCount = 0;
+        }
+
+        setInterval(fetchState, 1000);
+        fetchState();
+    </script>
+</body>
+</html>

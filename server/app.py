@@ -24,7 +24,28 @@ def read_root():
         "env": "CloudRedTeamArena",
         "version": "1.0.0",
         "tasks": ["easy", "medium", "hard"],
-        "endpoints": ["/", "/reset", "/step", "/state", "/ws"],
+        "endpoints": ["/", "/reset", "/step", "/state", "/ws", "/dashboard", "/api/ui-state"],
+    }
+
+from fastapi.responses import HTMLResponse
+import os
+@app.get("/dashboard")
+def dashboard():
+    ui_path = os.path.join(os.path.dirname(__file__), "ui.html")
+    with open(ui_path, "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
+
+@app.get("/api/ui-state")
+def ui_state():
+    import server.environment
+    env = server.environment.ACTIVE_ENV
+    if not env:
+        return {"status": "offline"}
+    return {
+        "status": "online",
+        "task": env.t,
+        "step": env.st.step_count,
+        "sim_state": env.zz
     }
 
 

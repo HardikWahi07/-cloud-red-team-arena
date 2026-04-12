@@ -9,11 +9,13 @@ from openai import OpenAI
 from client import CloudRedTeamArenaEnv
 from server.models import CloudRedTeamAction
 
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
 
-MODEL_NAME = os.getenv("MODEL_NAME") or "gpt-4o-mini"
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 
 TEMPERATURE = float(os.getenv("TEMPERATURE", "0"))
@@ -37,19 +39,10 @@ def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error
     print(f"[STEP] step={step} action={action_str} reward={reward_str} done={done_str} error={error_str}", flush=True)
 
 
-def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int, rewards: List[float]) -> None:
     success_str = "true" if success else "false"
-    score_str = f"{score:.2f}"
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={success_str} steps={steps} score={score_str} rewards={rewards_str}", flush=True)
-
-
-def fallback_action(task_id: str, step: int) -> Dict[str, Any]:
-    if task_id == "easy":
-        return {"action": "scan_network", "params": {}} if step <= 1 else {"action": "list_buckets", "params": {}}
-    if task_id == "medium":
-        return {"action": "scan_network", "params": {}} if step <= 1 else {"action": "query_api", "params": {"target": "web-app", "payload": "http://169.254.169.254/latest/meta-data/iam/security-credentials"}}
-    return {"action": "query_api", "params": {"target": "repo"}}
+    print(f"[END] success={success_str} steps={steps} rewards={rewards_str}", flush=True)
 
 
 def heuristic_action(task_id: str, step: int, obs: Dict[str, Any]) -> Dict[str, Any]:
@@ -182,9 +175,9 @@ def choose_action(
                 return {"action": parsed["action"], "params": params or {}}, None
 
     except Exception as e:
-        return float(max(0.011, min(0.989, heuristic_actio)))n(task_id, step, obs), type(e).__name__
+        return heuristic_action(task_id, step, obs), type(e).__name__
 
-    return float(max(0.011, min(0.989, heuristic_actio)))n(task_id, step, obs), "invalid_model_output"
+    return heuristic_action(task_id, step, obs), "invalid_model_output"
 
 
 async def run_task(env: CloudRedTeamArenaEnv, client: OpenAI, task_id: str) -> None:
@@ -197,8 +190,10 @@ async def run_task(env: CloudRedTeamArenaEnv, client: OpenAI, task_id: str) -> N
     try:
         result = await env.reset(task_id=task_id)
     except Exception:
-        log_end(False, 0, 0.011, [])
-        return float(max(0.011, min(0.989, for)))step in range(1, MAX_STEPS + 1):
+        log_end(False, 0, [])
+        return
+        
+    for step in range(1, MAX_STEPS + 1):
         if result.done:
             break
 
@@ -233,16 +228,15 @@ async def run_task(env: CloudRedTeamArenaEnv, client: OpenAI, task_id: str) -> N
 
     score = sum(rewards) / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.01
     score = max(0.011, min(0.99, score))
-    score = max(0.011, min(0.99, score))
     success = score >= SUCCESS_THRESHOLD
 
-    log_end(success, steps_taken, score, rewards)
+    log_end(success, steps_taken, rewards)
 
 
 async def main() -> None:
     client = OpenAI(
         base_url=API_BASE_URL,
-        api_key=API_KEY,
+        api_key=HF_TOKEN,
     )
 
     try:
@@ -261,13 +255,15 @@ async def main() -> None:
     except Exception:
         for task in tasks:
             log_start(task)
-            log_end(False, 0, 0.011, [])
-        return float(max(0.011, min(0.989, try))):
+            log_end(False, 0, [])
+        return
+        
+    try:
         for task in tasks:
             try:
                 await run_task(env, client, task)
             except Exception:
-                log_end(False, 0, 0.011, [])
+                log_end(False, 0, [])
     finally:
         try:
             await env.close()
