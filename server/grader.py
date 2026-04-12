@@ -15,17 +15,17 @@ based on action consistency (avoiding repeated/redundant actions).
 from typing import Callable, Dict
 
 
-def safe_score(x: float, eps: float = 0.001) -> float:
+def safe_score(x: float, eps: float = 0.01) -> float:
     """
-    Strictly ensure that scores are within (0.001, 0.999) range.
-    Guarantees no 0.0 or 1.0 while maintaining high precision.
+    Strictly ensure that scores are within (0.01, 0.99) range.
+    Guarantees that even with 2-decimal rounding in logs, scores NEVER print as 0.00 or 1.00.
     """
     val = float(x)
     return min(max(val, eps), 1.0 - eps)
 
 
 def clamp(val: float) -> float:
-    """Clamps to strict (0.001, 0.999) range."""
+    """Clamps to strict (0.01, 0.99) range."""
     return safe_score(val)
 
 
