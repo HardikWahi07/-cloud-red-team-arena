@@ -23,8 +23,8 @@ def info():
     return {
         "env": "CloudRedTeamArena",
         "version": "1.0.0",
-        "tasks": ["easy", "medium", "hard"],
-        "endpoints": ["/", "/api/info", "/reset", "/step", "/state", "/ws", "/dashboard", "/api/ui-state"],
+        "tasks": ["easy", "medium", "hard", "custom"],
+        "endpoints": ["/", "/api/info", "/reset", "/step", "/state", "/ws", "/dashboard", "/api/ui-state", "/api/deploy-custom"],
     }
 
 from fastapi.responses import HTMLResponse
@@ -48,6 +48,30 @@ def ui_state():
         "step": env.st.step_count,
         "sim_state": env.zz
     }
+
+from fastapi import Request
+@app.post("/api/deploy-custom")
+async def deploy_custom(req: Request):
+    import server.environment
+    env = server.environment.ACTIVE_ENV
+    if not env:
+        return {"status": "error", "message": "offline"}
+    payload = await req.json()
+    scenario = payload.get("scenario", {})
+    env.t = "custom"
+    env.zz = scenario
+    env.zz["access_level"] = "none"
+    env.zz["alerts_triggered"] = 0
+    env.zz["budget_remaining"] = int((env.zz.get("limits", {}) or {}).get("budget") or 20)
+    env.zz["rate_counters"] = {}
+    from server.grader import get_grader
+    from uuid import uuid4
+    from openenv.core.env_server.types import State
+    env.g = get_grader("custom")
+    env.la = None
+    env.st = State(episode_id=str(uuid4()), step_count=0, task_id="custom")
+    env._l("[+] Custom Environment deployed manually")
+    return {"status": "ok"}
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):

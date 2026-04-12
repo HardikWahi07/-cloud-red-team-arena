@@ -293,13 +293,17 @@
             </li>
         </ul>
         <div class="sidebar-footer">
-            <div class="control-group">
-                <select id="task-selector" style="flex-grow: 1;">
-                    <option value="easy">Easy Task</option>
-                    <option value="medium">Medium Task</option>
-                    <option value="hard">Hard Task</option>
-                </select>
-                <button class="btn-primary" onclick="resetEnv()">Deploy</button>
+            <div class="control-group" style="align-items: flex-start; flex-direction: column;">
+                <div style="display:flex; gap:0.5rem; width:100%">
+                    <select id="task-selector" style="flex-grow: 1;" onchange="toggleCustomInput()">
+                        <option value="easy">Easy Task</option>
+                        <option value="medium">Medium Task</option>
+                        <option value="hard">Hard Task</option>
+                        <option value="custom">Custom Scenario</option>
+                    </select>
+                    <button class="btn-primary" onclick="resetEnv()">Deploy</button>
+                </div>
+                <textarea id="custom-scenario-input" style="display:none; width:100%; height:80px; background:var(--bg-body); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-top:0.5rem; font-family:monospace; font-size:0.75rem; padding:0.5rem;" placeholder='{"services": ["storage"], "buckets": {"my-bucket": {"policy": "public", "content": "flag{my_flag}"}}, "objectives": {"sensitive_bucket": "my-bucket"}}'></textarea>
             </div>
         </div>
     </div>
@@ -444,13 +448,42 @@
             }
         }
 
+        function toggleCustomInput() {
+            const task = document.getElementById('task-selector').value;
+            const input = document.getElementById('custom-scenario-input');
+            if (task === 'custom') {
+                input.style.display = 'block';
+            } else {
+                input.style.display = 'none';
+            }
+        }
+
         async function resetEnv() {
             const task = document.getElementById('task-selector').value;
-            fetch(`${API_URL}/reset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task_id: task })
-            }).then(() => { 
+            let promise;
+            if (task === 'custom') {
+                const scenarioText = document.getElementById('custom-scenario-input').value;
+                let parsed;
+                try {
+                    parsed = JSON.parse(scenarioText || "{}");
+                } catch(e) {
+                    alert("Invalid JSON in Custom Scenario");
+                    return;
+                }
+                promise = fetch(`${API_URL}/api/deploy-custom`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scenario: parsed })
+                });
+            } else {
+                promise = fetch(`${API_URL}/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ task_id: task })
+                });
+            }
+            
+            promise.then(() => { 
                 lastLogCount = 0;
                 document.getElementById('log-container').innerHTML = '<div class="empty-state">Deploying environment...</div>';
                 fetchState(); 

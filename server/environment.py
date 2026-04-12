@@ -10,10 +10,14 @@ from .models import CloudRedTeamAction, CloudRedTeamObservation
 from .scenarios import load_scenario
 
 
+ACTIVE_ENV = None
+
 class CloudRedTeamEnvironment(
     Environment[CloudRedTeamAction, CloudRedTeamObservation, State]
 ):
     def __init__(self):
+        global ACTIVE_ENV
+        ACTIVE_ENV = self
         super().__init__()
         self.t = "easy"
         self.zz = load_scenario(self.t)
