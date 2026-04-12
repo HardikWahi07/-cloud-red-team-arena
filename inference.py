@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from openai import OpenAI
 
 from client import CloudRedTeamArenaEnv
+from server.grader import safe_score
 from server.models import CloudRedTeamAction
 
 # ---------------------------------------------------------------------------
@@ -55,7 +56,7 @@ def log_start(task: str) -> None:
 def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error: str | None) -> None:
     """Emit the [STEP] log line for one agent action."""
     action_str = json.dumps(action, separators=(",", ":"), sort_keys=True)
-    reward_str = f"{reward:.2f}"
+    reward_str = f"{safe_score(reward):.6f}"
     done_str = "true" if done else "false"
     error_str = error if error else "null"
     print(f"[STEP] step={step} action={action_str} reward={reward_str} done={done_str} error={error_str}", flush=True)
@@ -64,7 +65,7 @@ def log_step(step: int, action: Dict[str, Any], reward: float, done: bool, error
 def log_end(success: bool, steps: int, rewards: List[float]) -> None:
     """Emit the [END] log line marking task completion."""
     success_str = "true" if success else "false"
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    rewards_str = ",".join(f"{safe_score(r):.6f}" for r in rewards)
     print(f"[END] success={success_str} steps={steps} rewards={rewards_str}", flush=True)
 
 
@@ -519,7 +520,7 @@ async def run_task(env: CloudRedTeamArenaEnv, client: OpenAI, task_id: str) -> N
             break
 
     score = sum(rewards) / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.01
-    score = max(0.011, min(0.99, score))
+    score = safe_score(score)
     success = score >= SUCCESS_THRESHOLD
 
     log_end(success, steps_taken, rewards)

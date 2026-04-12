@@ -266,68 +266,70 @@ const App = () => {
         });
     };
 
-    const on = st?.status === 'online';
-    const sim = st?.sim_state || {};
-    const lim = sim.limits || {budget: 20};
-    const bud = sim.budget_remaining ?? 0;
-    const alt = sim.alerts_triggered || 0;
-    const k = sim.agent_knowledge || {};
-    const logs = sim.logs || [];
-    const traces = st?.reasoning_traces || [];
-    const tNow = st?.task || task;
-    const flow = FLOWS[tNow] || FLOWS.custom;
-    const doneSteps = flow.filter(n => n.check(k)).length;
-    const prog = (doneSteps / flow.length) * 100;
-    const stealth = Math.max(0, 100 - (alt * 20));
-    const eff = Math.max(0, (bud / Math.max(1, lim.budget)) * 100);
-    const isDone = k.objective_complete || st?.step >= 10;
+    // Protective rendering to prevent "all black screen" on logic errors
+    try {
+        const on = st?.status === 'online';
+        const sim = st?.sim_state || {};
+        const lim = sim.limits || {budget: 20};
+        const bud = sim.budget_remaining ?? 0;
+        const alt = sim.alerts_triggered || 0;
+        const k = sim.agent_knowledge || {};
+        const logs = sim.logs || [];
+        const traces = st?.reasoning_traces || [];
+        const tNow = st?.task || task || 'easy';
+        const flow = FLOWS[tNow] || FLOWS.custom || [];
+        const done = (flow || []).filter(n => n?.check && n.check(k)).length;
+        const prog = flow.length > 0 ? (done / flow.length) * 100 : 0;
+        const stealth = Math.max(0, 100 - (alt * 20));
+        const eff = Math.max(0, (bud / Math.max(1, lim.budget)) * 100);
+        const isDone = !!(k.objective_complete || (st?.step && st.step >= 10));
 
-    return (
-        <div className="h-full flex flex-col bg-bg text-gray-400">
-            {/* ═══ HEADER ═══ */}
-            <header className="bg-surface/80 backdrop-blur-xl border-b border-border px-5 py-2.5 flex items-center justify-between z-50 shrink-0">
-                <div className="flex items-center gap-4">
+        return (
+            <div className="h-full flex flex-col bg-bg text-gray-400">
+                {/* ═══ HEADER ═══ */}
+                <header className="bg-surface/80 backdrop-blur-xl border-b border-border px-5 py-2.5 flex items-center justify-between z-50 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"><I.Shield/></div>
+                            <div>
+                                <div className="text-sm font-black text-white tracking-tight leading-none uppercase">Cloud Red Team <span className="text-brand">Arena</span></div>
+                                <div className="text-[8px] text-gray-600 uppercase tracking-[0.25em] mt-0.5 font-medium">Command Center v2.1</div>
+                            </div>
+                        </div>
+                        <div className="h-6 w-px bg-border mx-1"/>
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border
+                            ${on ? 'text-green border-green/20 bg-green/5' : 'text-red border-red/20 bg-red/5'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${on ? 'bg-green animate-pulse' : 'bg-red'}`}/>
+                            {on ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}
+                        </div>
+                        {on && tNow && (
+                            <div className={`text-[9px] font-bold uppercase tracking-wider ${TASK_COLORS[tNow] || 'text-gray-400'}`}>
+                                 {TASK_NAMES[tNow] || tNow} MISSION
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"><I.Shield/></div>
-                        <div>
-                            <div className="text-sm font-black text-white tracking-tight leading-none uppercase">Cloud Red Team <span className="text-brand">Arena</span></div>
-                            <div className="text-[8px] text-gray-600 uppercase tracking-[0.25em] mt-0.5 font-medium">Command Center v2.1</div>
-                        </div>
+                        <select className="bg-bg border border-border text-[11px] font-medium rounded px-2 py-1.5 text-gray-300 outline-none focus:border-brand cursor-pointer hover:bg-surface transition-colors"
+                            value={task} onChange={e => setTask(e.target.value)}>
+                            <option value="easy">🟢 Easy — S3 Discovery</option>
+                            <option value="medium">🟡 Medium — SSRF / IAM Pivot</option>
+                            <option value="hard">🔴 Hard — Supply Chain Breach</option>
+                            <option value="custom">⚙️ Custom Scenario (JSON)</option>
+                        </select>
+                        <button onClick={deploy} className="bg-brand/90 hover:bg-brand text-white px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95">
+                            <I.Rotate/> DEPLOY
+                        </button>
+                        <button onClick={step1} disabled={!on} className="bg-surface hover:bg-card text-gray-300 px-2.5 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 border border-border transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <I.Skip/> STEP
+                        </button>
+                        <button onClick={() => setPlaying(!playing)} disabled={!on}
+                            className={`px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+                            ${playing ? 'bg-amber/90 hover:bg-amber text-black ring-1 ring-amber/40' : 'bg-green/90 hover:bg-green text-black shadow-lg shadow-green/10'}`}>
+                            {playing ? <><I.Pause/> STOP</> : <><I.Play/> RUN AGENT</>}
+                        </button>
                     </div>
-                    <div className="h-6 w-px bg-border mx-1"/>
-                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border
-                        ${on ? 'text-green border-green/20 bg-green/5' : 'text-red border-red/20 bg-red/5'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${on ? 'bg-green animate-pulse' : 'bg-red'}`}/>
-                        {on ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}
-                    </div>
-                    {on && tNow && (
-                        <div className={`text-[9px] font-bold uppercase tracking-wider ${TASK_COLORS[tNow] || 'text-gray-400'}`}>
-                             {TASK_NAMES[tNow] || tNow} MISSION
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <select className="bg-bg border border-border text-[11px] font-medium rounded px-2 py-1.5 text-gray-300 outline-none focus:border-brand cursor-pointer hover:bg-surface transition-colors"
-                        value={task} onChange={e => setTask(e.target.value)}>
-                        <option value="easy">🟢 Easy — S3 Discovery</option>
-                        <option value="medium">🟡 Medium — SSRF / IAM Pivot</option>
-                        <option value="hard">🔴 Hard — Supply Chain Breach</option>
-                        <option value="custom">⚙️ Custom Scenario (JSON)</option>
-                    </select>
-                    <button onClick={deploy} className="bg-brand/90 hover:bg-brand text-white px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95">
-                        <I.Rotate/> DEPLOY
-                    </button>
-                    <button onClick={step1} disabled={!on} className="bg-surface hover:bg-card text-gray-300 px-2.5 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 border border-border transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <I.Skip/> STEP
-                    </button>
-                    <button onClick={() => setPlaying(!playing)} disabled={!on}
-                        className={`px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                        ${playing ? 'bg-amber/90 hover:bg-amber text-black ring-1 ring-amber/40' : 'bg-green/90 hover:bg-green text-black shadow-lg shadow-green/10'}`}>
-                        {playing ? <><I.Pause/> STOP</> : <><I.Play/> RUN AGENT</>}
-                    </button>
-                </div>
-            </header>
+                </header>
 
             {/* ═══ BODY ═══ */}
             <div className="flex-1 overflow-hidden grid grid-cols-12 gap-2 p-2">
@@ -477,10 +479,30 @@ const App = () => {
                             )}
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    } catch (err) {
+        console.error('[FATAL] UI Render Error:', err);
+        return (
+            <div className="h-screen bg-[#080c14] flex items-center justify-center p-10 font-sans">
+                <div className="max-w-md w-full bg-[#0d1321] border border-red/30 rounded-xl p-8 text-center shadow-2xl">
+                    <div className="w-16 h-16 bg-red/10 text-red rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <h1 className="text-xl font-black text-white mb-2 uppercase tracking-tighter">Command Center Crash</h1>
+                    <p className="text-sm text-gray-500 mb-6 font-medium">A critical rendering error occurred in the React interface. This is likely due to an undefined variable in the mission state.</p>
+                    <div className="bg-[#080c14] rounded-lg p-4 mb-6 border border-[#1c2640]">
+                        <code className="text-[10px] text-red font-mono break-all">{err.message}</code>
+                    </div>
+                    <button onClick={() => window.location.reload()} className="w-full bg-[#4f8ff7] py-3 rounded-lg text-sm font-bold text-white hover:bg-brand/90 transition-all uppercase tracking-widest">
+                        Reboot Interface
+                    </button>
+                </div>
+            </div>
+        );
+    }
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

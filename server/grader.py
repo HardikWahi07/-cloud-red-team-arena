@@ -15,18 +15,28 @@ based on action consistency (avoiding repeated/redundant actions).
 from typing import Callable, Dict
 
 
+def safe_score(x: float, eps: float = 1e-6) -> float:
+    """
+    Strictly ensure that scores are within (0, 1) range.
+    NEVER returns 0.0 or 1.0.
+    """
+    val = float(x)
+    return min(max(val, eps), 1.0 - eps)
+
+
 def clamp(val: float) -> float:
-    """Clamp a score to the RL-compatible range (0.0001, 0.9999)."""
-    return float(max(0.0001, min(0.9999, val)))
+    """Legacy wrapper for safe_score to maintain backward compatibility."""
+    return safe_score(val)
 
 
 def _compute_stealth(sim_data: dict) -> float:
     """
     Compute stealth score from alert count.
-    Each alert reduces stealth by 20%. Zero alerts = perfect stealth.
+    Each alert reduces stealth by 20%. Zero alerts = perfect stealth (0.999999).
     """
     alerts = int(sim_data.get("alerts_triggered", 0))
-    return max(0.0, 1.0 - (alerts * 0.2))
+    score = 1.0 - (alerts * 0.2)
+    return safe_score(score)
 
 
 def _compute_efficiency(sim_data: dict) -> float:
@@ -35,9 +45,12 @@ def _compute_efficiency(sim_data: dict) -> float:
     Measures how economically the agent operated.
     """
     limits = sim_data.get("limits", {}) or {}
-    budget_total = int(limits.get("budget", 10))
-    budget_remaining = int(sim_data.get("budget_remaining", 0))
-    return max(0.0, budget_remaining / max(1, float(budget_total)))
+    budget_total = float(limits.get("budget", 10))
+    budget_remaining = float(sim_data.get("budget_remaining", 0))
+    
+    # Guarded division
+    score = budget_remaining / budget_total if budget_total > 0 else 0.5
+    return safe_score(score)
 
 
 def _compute_consistency(sim_data: dict) -> float:
@@ -47,7 +60,7 @@ def _compute_consistency(sim_data: dict) -> float:
     """
     logs = sim_data.get("logs", []) or []
     if len(logs) < 2:
-        return 1.0
+        return safe_score(1.0)
 
     # Count consecutive duplicate log patterns
     duplicates = 0
@@ -55,7 +68,8 @@ def _compute_consistency(sim_data: dict) -> float:
         if logs[i] == logs[i - 1]:
             duplicates += 1
 
-    return max(0.0, 1.0 - (duplicates * 0.15))
+    score = 1.0 - (duplicates * 0.15)
+    return safe_score(score)
 
 
 def _final_score(success: float, stealth: float, efficiency: float, realism: float, consistency: float) -> float:
@@ -206,6 +220,6 @@ def get_grader(task_id: str) -> Callable:
     """
     Return the appropriate grading function for the given task.
 
-    Falls back to a zero-score lambda for unknown task IDs (e.g., 'custom').
+    Falls back to a near-zero score for unknown task IDs.
     """
-    return _GRADERS.get(task_id, lambda _: clamp(0.0))
+    return _GRADERS.get(task_id, lambda _: safe_score(0.01))

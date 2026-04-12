@@ -5,7 +5,7 @@ from uuid import uuid4
 from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
-from .grader import get_grader
+from .grader import get_grader, safe_score
 from .models import CloudRedTeamAction, CloudRedTeamObservation
 from .scenarios import load_scenario
 
@@ -54,7 +54,7 @@ class CloudRedTeamEnvironment(
             alerts_triggered=self.sim_data.get("alerts_triggered", 0),
             logs=q or [],
             done=False,
-            reward=0.011,
+            reward=safe_score(0.01),
         )
 
     def reset(
@@ -122,7 +122,7 @@ class CloudRedTeamEnvironment(
             a("[!] CRITICAL: Operational budget exhausted. Mission terminated.")
             b0 = float(self.grader(self.sim_data))
             b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-            z = max(0.011, min(0.989, b0 + p - b1))
+            z = safe_score(b0 + p - b1)
             o = self._o(q=q)
             o.reward = z
             o.done = True
@@ -162,7 +162,7 @@ class CloudRedTeamEnvironment(
                     self.sim_data["alerts_triggered"] += 1
                     b0 = float(self.grader(self.sim_data))
                     b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-                    z = max(0.011, min(0.989, b0 + p - b1))
+                    z = safe_score(b0 + p - b1)
                     o = self._o(q=q)
                     o.reward = z
                     o.done = False
@@ -216,7 +216,7 @@ class CloudRedTeamEnvironment(
                     self.sim_data["alerts_triggered"] += 1
                     b0 = float(self.grader(self.sim_data))
                     b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-                    z = max(0.011, min(0.989, b0 + p - b1))
+                    z = safe_score(b0 + p - b1)
                     o = self._o(q=q)
                     o.reward = z
                     o.done = False
@@ -286,7 +286,7 @@ class CloudRedTeamEnvironment(
                     self.sim_data["alerts_triggered"] += 1
                     b0 = float(self.grader(self.sim_data))
                     b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-                    z = max(0.011, min(0.989, b0 + p - b1))
+                    z = safe_score(b0 + p - b1)
                     o = self._o(q=q)
                     o.reward = z
                     o.done = False
@@ -396,7 +396,7 @@ class CloudRedTeamEnvironment(
 
         b0 = float(self.grader(self.sim_data))
         b1 = float(self.sim_data["alerts_triggered"]) * 0.2
-        z = max(0.011, min(0.989, b0 + p - b1))
+        z = safe_score(b0 + p - b1)
         d = bool(k.get("objective_complete")) or b0 >= 0.99 or self.env_state.step_count >= 10
 
         o = self._o(q=q)
