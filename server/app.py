@@ -92,6 +92,13 @@ async def run_step():
             sys.path.insert(0, root_dir)
         from inference import heuristic_action
         obs = env._o().model_dump()
+        
+        # Inject the most recent logs from the environment so the heuristic agent can read them
+        if hasattr(env, "zz") and "logs" in env.zz:
+            # Get logs from the last step by grabbing recent entries
+            # heuristic_action expects obs["logs"] to have the immediate feedback
+            obs["logs"] = env.zz["logs"][-5:]
+            
         act_dict = heuristic_action(env.t, env.st.step_count + 1, obs)
         action = CloudRedTeamAction(action=act_dict["action"], params=act_dict.get("params", {}))
         env.step(action)
