@@ -86,6 +86,10 @@ async def run_step():
         return {"status": "done"}
         
     try:
+        import sys, os
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if root_dir not in sys.path:
+            sys.path.insert(0, root_dir)
         from inference import heuristic_action
         obs = env._o().model_dump()
         act_dict = heuristic_action(env.t, env.st.step_count + 1, obs)

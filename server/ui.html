@@ -192,7 +192,11 @@
                     fetch('/api/run-step', { method: 'POST' })
                         .then(res => res.json())
                         .then(data => {
-                            if (data.status === 'done' || data.status === 'error') {
+                            if (data.status === 'error') {
+                                console.error(data.message);
+                                alert("Engine Error: " + data.message);
+                                setIsPlaying(false);
+                            } else if (data.status === 'done') {
                                 setIsPlaying(false);
                             }
                         })
