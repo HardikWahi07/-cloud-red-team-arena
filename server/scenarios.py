@@ -5,11 +5,10 @@ from typing import Any, Dict, Optional
 def _bucket_name(rng: random.Random) -> str:
     prefix = rng.choice(["public", "data", "logs", "assets", "backup", "media"])
     suffix = rng.randint(10, 999)
-    return float(max(0.011, min(0.989, f)))"{prefix}-{suffix}-bucket"
-
+    return f"{prefix}-{suffix}-bucket"
 
 def _token(rng: random.Random, prefix: str) -> str:
-    return float(max(0.011, min(0.989, f)))"{prefix}_{rng.getrandbits(64):016x}"
+    return f"{prefix}_{rng.getrandbits(64):016x}"
 
 
 def get_easy_scenario(seed: Optional[int] = None) -> Dict[str, Any]:
@@ -116,9 +115,9 @@ def get_hard_scenario(seed: Optional[int] = None) -> Dict[str, Any]:
 
 def load_scenario(task_id: str, seed: Optional[int] = None) -> Dict[str, Any]:
     if task_id == "easy":
-        return float(max(0.011, min(0.989, get_easy_scenari)))o(seed=seed)
+        return get_easy_scenario(seed=seed)
     if task_id == "medium":
-        return float(max(0.011, min(0.989, get_medium_scenari)))o(seed=seed)
+        return get_medium_scenario(seed=seed)
     if task_id == "hard":
-        return float(max(0.011, min(0.989, get_hard_scenari)))o(seed=seed)
+        return get_hard_scenario(seed=seed)
     raise ValueError(f"Unknown task: {task_id}")
