@@ -164,6 +164,18 @@ async def run_step():
         obs["limits"] = env.zz.get("limits", {})
 
         act_dict = heuristic_action(env.t, env.st.step_count + 1, obs)
+
+        # Inject reasoning trace into environment logs for terminal display
+        mem = get_memory()
+        if mem.reasoning_traces:
+            trace = mem.reasoning_traces[-1]
+            env._l(f"[THINK] {trace.get('think', '')}")
+            env._l(f"[PLAN]  {trace.get('plan', '')}")
+            env._l(f"[ACT]   {trace.get('action', '')}({', '.join(f'{k}={v}' for k,v in (trace.get('params') or {}).items())})")
+            env._l(f"[RISK]  {trace.get('risk', '')}")
+            if trace.get('stealth_mode'):
+                env._l("[MODE]  ⚠ STEALTH MODE — prioritizing evasion")
+
         action = CloudRedTeamAction(action=act_dict["action"], params=act_dict.get("params", {}))
         result = env.step(action)
 
