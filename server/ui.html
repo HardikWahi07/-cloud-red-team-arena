@@ -1,497 +1,397 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Red Team Arena | Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-body: #0d1117;
-            --bg-panel: #161b22;
-            --bg-active: #21262d;
-            --border-color: #30363d;
-            --text-primary: #c9d1d9;
-            --text-secondary: #8b949e;
-            --color-blue: #58a6ff;
-            --color-green: #3fb950;
-            --color-red: #f85149;
-            --color-warning: #d29922;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-primary);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Sidebar Navigation */
-        .sidebar {
-            width: 250px;
-            background-color: var(--bg-panel);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar-header {
-            height: 60px;
-            display: flex;
-            align-items: center;
-            padding: 0 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            font-size: 1rem;
-            color: #ffffff;
-            letter-spacing: 0.5px;
-        }
-
-        .nav-list {
-            list-style: none;
-            padding: 1rem 0;
-            flex-grow: 1;
-        }
-
-        .nav-item {
-            padding: 0.75rem 1.5rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            transition: background 0.2s, color 0.2s;
-        }
-
-        .nav-item:hover {
-            color: var(--text-primary);
-            background-color: #1c2128;
-        }
-
-        .nav-item.active {
-            color: var(--text-primary);
-            background-color: var(--bg-active);
-            border-left: 3px solid var(--color-blue);
-        }
-
-        .sidebar-footer {
-            padding: 1rem;
-            border-top: 1px solid var(--border-color);
-        }
-
-        /* Main Content Area */
-        .main-wrapper {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: var(--bg-body);
-        }
-
-        .topbar {
-            height: 60px;
-            background-color: var(--bg-panel);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 2rem;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--text-secondary);
-        }
-
-        .status-dot.online { background-color: var(--color-green); }
-        .status-dot.offline { background-color: var(--text-secondary); }
-
-        .content-area {
-            flex-grow: 1;
-            padding: 2rem;
-            overflow-y: auto;
-        }
-
-        /* Tab Contents */
-        .tab-content {
-            display: none;
-            height: 100%;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Panels & Cards */
-        .card {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .card-header {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        /* Grid Layouts */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-        }
-        
-        .grid-3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-        }
-
-        .metric-box {
-            background: var(--bg-active);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 1rem;
-        }
-
-        .metric-title {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .metric-val {
-            font-size: 1.5rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* Form elements */
-        .control-group {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        select, button {
-            background-color: var(--bg-body);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-family: inherit;
-            font-size: 0.85rem;
-            cursor: pointer;
-        }
-
-        select:focus, button:focus { outline: none; border-color: var(--color-blue); }
-        select:hover, button:hover { border-color: var(--text-secondary); }
-
-        button.btn-primary {
-            background-color: #238636;
-            color: #ffffff;
-            border: 1px solid rgba(240, 246, 252, 0.1);
-        }
-
-        button.btn-primary:hover { background-color: #2ea043; border-color: rgba(240, 246, 252, 0.1); }
-
-        /* Terminal/Logs */
-        .terminal {
-            background-color: #010409;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            height: 400px;
-            overflow-y: auto;
-            color: var(--text-primary);
-        }
-
-        .log-row {
-            padding: 0.15rem 0;
-            line-height: 1.5;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            word-wrap: break-word;
-        }
-
-        .log-error { color: var(--color-red); }
-        .log-warn { color: var(--color-warning); }
-        .log-success { color: var(--color-green); }
-        .log-info { color: var(--color-blue); }
-
-        .json-view {
-            background-color: #010409;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--text-primary);
-            white-space: pre-wrap;
-            overflow-y: auto;
-            height: 300px;
-        }
-
-        .empty-state {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-    </style>
-</head>
-<body>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            Cloud Red Team Console
-        </div>
-        <ul class="nav-list">
-            <li class="nav-item active" data-target="tab-execution" onclick="switchTab('tab-execution')">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5h-3.32Zm-1.43-.5a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"></path></svg>
-                Executioner
-            </li>
-            <li class="nav-item" data-target="tab-data" onclick="switchTab('tab-data')">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 2.75l.123-.02c.87-.14 2.1-.23 3.377-.23 1.277 0 2.507.09 3.377.23H9.5a2 2 0 0 1 1.995 1.85L11.5 4.75v6.5a2 2 0 0 1-1.85 1.995L9.5 13.25h-.123c-.87.14-2.1.23-3.377.23-1.277 0-2.507-.09-3.377-.23H2.5a2 2 0 0 1-1.995-1.85L.5 11.25v-6.5a2 2 0 0 1 1.85-1.995L2.5 2.75Zm.384 1.458c-.76.122-1.384.214-1.384.542v6.5c0 .328.624.42 1.384.542.846.136 2.031.258 3.116.258 1.085 0 2.27-.122 3.116-.258.76-.122 1.384-.214 1.384-.542v-6.5c0-.328-.624-.42-1.384-.542-.846-.136-2.031-.208-3.116-.208-1.085 0-2.27.072-3.116.208Z"></path></svg>
-                Data Vault
-            </li>
-            <li class="nav-item" data-target="tab-flow" onclick="switchTab('tab-flow')">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5ZM1.75 4a.75.75 0 0 1 0-1.5h3.5a.75.75 0 0 1 0 1.5h-3.5ZM10.5 10.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5Zm-2.25 2.25a.75.75 0 0 1 0-1.5h3.5a.75.75 0 0 1 0 1.5h-3.5ZM14.25 5.25a.75.75 0 0 0 0-1.5H9.5a.75.75 0 0 0 0 1.5h4.75ZM5.25 14.25a.75.75 0 0 0 0-1.5H1.75a.75.75 0 0 0 0 1.5h3.5Z"></path></svg>
-                App Flow
-            </li>
-        </ul>
-        <div class="sidebar-footer">
-            <div class="control-group" style="align-items: flex-start; flex-direction: column;">
-                <div style="display:flex; gap:0.5rem; width:100%">
-                    <select id="task-selector" style="flex-grow: 1;" onchange="toggleCustomInput()">
-                        <option value="easy">Easy Task</option>
-                        <option value="medium">Medium Task</option>
-                        <option value="hard">Hard Task</option>
-                        <option value="custom">Custom Scenario</option>
-                    </select>
-                    <button class="btn-primary" onclick="resetEnv()">Deploy</button>
-                </div>
-                <textarea id="custom-scenario-input" style="display:none; width:100%; height:80px; background:var(--bg-body); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-top:0.5rem; font-family:monospace; font-size:0.75rem; padding:0.5rem;" placeholder='{"services": ["storage"], "buckets": {"my-bucket": {"policy": "public", "content": "flag{my_flag}"}}, "objectives": {"sensitive_bucket": "my-bucket"}}'></textarea>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-wrapper">
-        <div class="topbar">
-            <div style="font-size: 0.95rem; font-weight: 500;">Environment Dashboard</div>
-            <div class="status-badge">
-                <div id="status-indicator" class="status-dot offline"></div>
-                <span id="connection-status">Connecting...</span>
-            </div>
-        </div>
-
-        <div class="content-area">
-            
-            <!-- Tab: Executioner -->
-            <div id="tab-execution" class="tab-content active">
-                <div class="card">
-                    <div class="card-header">Runtime Overview</div>
-                    <div class="grid-3" style="margin-bottom: 1.5rem;">
-                        <div class="metric-box">
-                            <div class="metric-title">Active Task</div>
-                            <div class="metric-val" id="val-task">-</div>
-                        </div>
-                        <div class="metric-box">
-                            <div class="metric-title">Step Progress</div>
-                            <div class="metric-val" id="val-step">0</div>
-                        </div>
-                        <div class="metric-box">
-                            <div class="metric-title">Budget Remaining</div>
-                            <div class="metric-val" id="val-budget">0</div>
-                        </div>
-                    </div>
-
-                    <div class="card-header" style="margin-top: 1rem;">Action Logs</div>
-                    <div id="log-container" class="terminal">
-                        <div class="empty-state">Waiting for task execution...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: Data Vault -->
-            <div id="tab-data" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-header">Agent Knowledge State</div>
-                        <div id="knowledge-container" class="json-view">{}</div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">Scenario Data</div>
-                        <div id="scenario-container" class="json-view">{}</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: App Flow -->
-            <div id="tab-flow" class="tab-content">
-                <div class="card">
-                    <div class="card-header">Simulation Flow Analysis</div>
-                    <div class="grid-2">
-                        <div class="metric-box">
-                            <div class="metric-title">Alerts Triggered</div>
-                            <div class="metric-val" id="val-alerts" style="color: var(--color-warning);">0</div>
-                        </div>
-                        <div class="metric-box">
-                            <div class="metric-title">Score</div>
-                            <div class="metric-val" id="val-score">-</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
+    <title>Cloud Red Team Simulator</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for in-browser JSX parsing -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <script>
-        const API_URL = window.location.origin;
-        let lastLogCount = 0;
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            document.querySelector(`[data-target="${tabId}"]`).classList.add('active');
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0B1120',
+                        panel: '#1E293B',
+                        panelBorder: '#334155',
+                        brand: '#3B82F6',
+                        success: '#10B981',
+                        alert: '#EF4444',
+                        warning: '#F59E0B'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+                    }
+                }
+            }
         }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0B1120; color: #CBD5E1; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748B; }
 
-        function formatLogLine(line) {
-            let className = 'log-row';
-            if(line.includes('[!]')) return `<div class="log-row log-error">${line}</div>`;
-            if(line.includes('[-]')) return `<div class="log-row log-warn">${line}</div>`;
-            if(line.includes('[+]')) return `<div class="log-row log-success">${line}</div>`;
-            if(line.includes('[*]')) return `<div class="log-row log-info">${line}</div>`;
-            return `<div class="log-row">${line}</div>`;
-        }
+        .glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); }
+        .glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.15); }
 
-        async function fetchState() {
-            try {
-                const res = await fetch(`${API_URL}/api/ui-state`);
-                const data = await res.json();
+        .terminal-log { animation: slideIn 0.2s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-screen overflow-hidden antialiased flex flex-col">
+    <div id="root" class="h-full w-full flex flex-col"></div>
 
-                const statusText = document.getElementById('connection-status');
-                const statusDot = document.getElementById('status-indicator');
-                
-                if (data.status === 'online') {
-                    statusText.textContent = 'Active';
-                    statusDot.className = 'status-dot online';
-                    
-                    document.getElementById('val-task').textContent = data.task.toUpperCase();
-                    document.getElementById('val-step').textContent = data.step;
-                    
-                    const budget = data.sim_state.budget_remaining || 0;
-                    document.getElementById('val-budget').textContent = budget;
-                    
-                    document.getElementById('val-alerts').textContent = data.sim_state.alerts_triggered || 0;
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-                    document.getElementById('knowledge-container').textContent = JSON.stringify(data.sim_state.agent_knowledge || {}, null, 2);
+        // --- Icons (using feather-icons via raw SVG for simplicity in React without bundle) ---
+        const IconActivity = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+        const IconCheckCircle = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        const IconAlertCircle = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        const IconServer = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>;
+        const IconShield = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
+        
+        // --- Shared Components ---
+        const Panel = ({ title, icon, children, className="" }) => (
+            <div className={`bg-panel border border-panelBorder rounded-xl flex flex-col overflow-hidden ${className}`}>
+                <div className="bg-slate-800/50 px-4 py-3 border-b border-panelBorder flex items-center gap-2 shrink-0">
+                    <span className="text-brand">{icon}</span>
+                    <h2 className="text-sm font-semibold text-slate-100 uppercase tracking-wider">{title}</h2>
+                </div>
+                <div className="p-4 flex-grow overflow-auto relative">
+                    {children}
+                </div>
+            </div>
+        );
 
-                    const logs = data.sim_state.logs || [];
-                    const logContainer = document.getElementById('log-container');
-                    
-                    if (logs.length > 0) {
-                        if (logContainer.querySelector('.empty-state')) {
-                            logContainer.innerHTML = '';
-                        }
-                        if (logs.length !== lastLogCount) {
-                            logContainer.innerHTML = '';
-                            logs.forEach(log => {
-                                logContainer.innerHTML += formatLogLine(log);
-                            });
-                            logContainer.scrollTop = logContainer.scrollHeight;
-                            lastLogCount = logs.length;
-                        }
+        const Metric = ({ label, value, subtext, colorClass="text-white" }) => (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 flex flex-col justify-between h-full">
+                <span className="text-xs text-slate-400 font-medium">{label}</span>
+                <div className="mt-1">
+                    <div className={`text-2xl font-bold font-mono ${colorClass}`}>{value}</div>
+                    {subtext && <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-semibold">{subtext}</div>}
+                </div>
+            </div>
+        );
+
+        const ProgressBar = ({ progress, colorClass="bg-brand" }) => (
+            <div className="w-full bg-slate-800 rounded-full h-2 mt-2">
+                <div className={`${colorClass} h-2 rounded-full transition-all duration-500`} style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}></div>
+            </div>
+        );
+
+        // --- Flows ---
+        const SCENARIO_FLOWS = {
+            easy: [
+                { id: 'storage', label: 'Scan Storage', check: k => k?.discovered_storage },
+                { id: 'bucket', label: 'List Buckets', check: k => k?.found_bucket },
+                { id: 'flag', label: 'Access Configs', check: k => k?.read_flag },
+                { id: 'patch', label: 'Patch Policy', check: k => k?.patched_sensitive_bucket }
+            ],
+            medium: [
+                { id: 'webapp', label: 'Discover WebApp', check: k => k?.discovered_services },
+                { id: 'ssrf', label: 'Exploit SSRF', check: k => k?.detected_ssrf },
+                { id: 'metadata', label: 'Metadata API', check: k => k?.enumerated_iam_role },
+                { id: 'iam', label: 'Extract IAM', check: k => k?.obtained_iam_creds },
+                { id: 'secrets', label: 'Steal Secrets', check: k => k?.listed_secrets || k?.retrieved_secret },
+                { id: 'db', label: 'Access DB', check: k => k?.accessed_db }
+            ],
+            hard: [
+                { id: 'repo', label: 'Discover Repo', check: k => k?.discovered_services },
+                { id: 'pat', label: 'Extract PAT', check: k => k?.found_leaked_token },
+                { id: 'ci', label: 'Access CI/CD', check: k => k?.got_ci_token },
+                { id: 'build', label: 'Modify Pipeline', check: k => k?.modified_pipeline },
+                { id: 'secrets', label: 'Admin Token', check: k => k?.got_admin_token },
+                { id: 'db', label: 'Breach DB', check: k => k?.accessed_db }
+            ],
+            custom: [
+                { id: 'agent', label: 'Agent Initialized', check: k => true },
+                { id: 'action', label: 'Actions Taken', check: k => Object.keys(k || {}).length > 0 },
+                { id: 'done', label: 'Simulation Complete', check: k => k?.objective_complete }
+            ]
+        };
+
+        const AttackFlow = ({ task, knowledge }) => {
+            const flow = SCENARIO_FLOWS[task] || SCENARIO_FLOWS['custom'];
+            
+            return (
+                <div className="flex items-center justify-between w-full h-full px-2 lg:px-4">
+                    {flow.map((node, idx) => {
+                        const isCompleted = node.check(knowledge);
+                        const isNext = !isCompleted && (idx === 0 || flow[idx-1].check(knowledge));
+                        
+                        let colorState = 'border-slate-700 bg-slate-800 text-slate-500';
+                        if (isCompleted) colorState = 'border-success bg-success/10 text-success glow-green';
+                        else if (isNext) colorState = 'border-brand bg-brand/10 text-brand';
+
+                        return (
+                            <div key={node.id} className="flex flex-col items-center relative flex-1">
+                                <div className={`w-8 h-8 lg:w-12 lg:h-12 rounded-full border-2 flex items-center justify-center z-10 transition-colors duration-300 bg-panel ${colorState}`}>
+                                    {isCompleted ? <IconCheckCircle /> : isNext ? <IconActivity /> : <div className="w-1 h-1 lg:w-2 lg:h-2 rounded-full bg-slate-600" />}
+                                </div>
+                                <span className={`text-[9px] lg:text-[11px] font-semibold mt-2 lg:mt-3 text-center uppercase tracking-wider ${isCompleted ? 'text-success' : isNext ? 'text-brand' : 'text-slate-500'}`}>
+                                    {node.label}
+                                </span>
+                                
+                                {idx < flow.length - 1 && (
+                                    <div className={`absolute top-4 lg:top-6 left-1/2 w-full h-[2px] -z-0 transition-colors duration-500 ${isCompleted ? 'bg-success/50' : 'bg-slate-700'}`}></div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        // --- Main Dashboard ---
+        const Dashboard = () => {
+            const [state, setState] = useState(null);
+            const [taskId, setTaskId] = useState('easy');
+            const [customJson, setCustomJson] = useState('{\n  "services": ["storage"]\n}');
+            const logsEndRef = useRef(null);
+
+            useEffect(() => {
+                const fetchState = async () => {
+                    try {
+                        const res = await fetch('/api/ui-state');
+                        const data = await res.json();
+                        setState(data);
+                    } catch (e) {
+                        setState({ status: 'error' });
+                    }
+                };
+                fetchState();
+                const interval = setInterval(fetchState, 1000);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }, [state?.sim_state?.logs?.length]);
+
+            const handleDeploy = async () => {
+                let promise;
+                if (taskId === 'custom') {
+                    try {
+                        const parsed = JSON.parse(customJson);
+                        promise = fetch('/api/deploy-custom', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ scenario: parsed })
+                        });
+                    } catch (e) {
+                        alert("Invalid Custom JSON"); return;
                     }
                 } else {
-                    statusText.textContent = 'Standby';
-                    statusDot.className = 'status-dot offline';
+                    promise = fetch('/api/reset', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ task_id: taskId })
+                    });
+                    // Fallback to core openenv API endpoint if api/reset undefined locally
+                    fetch('/reset', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ task_id: taskId })
+                    }).catch(console.error);
                 }
-            } catch (e) {
-                document.getElementById('connection-status').textContent = 'Disconnected';
-                document.getElementById('status-indicator').className = 'status-dot offline';
-            }
-        }
+            };
 
-        function toggleCustomInput() {
-            const task = document.getElementById('task-selector').value;
-            const input = document.getElementById('custom-scenario-input');
-            if (task === 'custom') {
-                input.style.display = 'block';
-            } else {
-                input.style.display = 'none';
-            }
-        }
-
-        async function resetEnv() {
-            const task = document.getElementById('task-selector').value;
-            let promise;
-            if (task === 'custom') {
-                const scenarioText = document.getElementById('custom-scenario-input').value;
-                let parsed;
-                try {
-                    parsed = JSON.parse(scenarioText || "{}");
-                } catch(e) {
-                    alert("Invalid JSON in Custom Scenario");
-                    return;
-                }
-                promise = fetch(`${API_URL}/api/deploy-custom`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ scenario: parsed })
-                });
-            } else {
-                promise = fetch(`${API_URL}/reset`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ task_id: task })
-                });
-            }
+            const isOnline = state?.status === 'online';
+            const sim = state?.sim_state || {};
+            const limits = sim.limits || { budget: 20 };
+            const budgetRem = sim.budget_remaining || 0;
+            const alerts = sim.alerts_triggered || 0;
+            const knowledge = sim.agent_knowledge || {};
+            const logs = sim.logs || [];
             
-            promise.then(() => { 
-                lastLogCount = 0;
-                document.getElementById('log-container').innerHTML = '<div class="empty-state">Deploying environment...</div>';
-                fetchState(); 
-            });
-        }
+            const taskActive = state?.task || 'easy';
+            const flow = SCENARIO_FLOWS[taskActive] || SCENARIO_FLOWS['custom'];
+            const completedNodes = flow.filter(n => n.check(knowledge)).length;
+            const successProgress = (completedNodes / flow.length) * 100;
+            const stealthScore = Math.max(0, 100 - (alerts * 20));
+            const efficiencyScore = Math.max(0, (budgetRem / Math.max(1, limits.budget)) * 100);
 
-        setInterval(fetchState, 1000);
-        fetchState();
+            return (
+                <div className="flex flex-col h-full w-full">
+                    {/* Header */}
+                    <header className="bg-panel border-b border-panelBorder px-6 lg:px-8 py-4 flex items-center justify-between shrink-0 shadow-lg z-20">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-brand/10 rounded-lg"><IconShield className="text-brand"/></div>
+                                <div>
+                                    <h1 className="text-lg lg:text-xl font-bold tracking-tight text-white leading-none">Cloud Red Team <span className="text-brand font-normal">Arena</span></h1>
+                                    <div className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Powered by OpenEnv</div>
+                                </div>
+                            </div>
+                            <div className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 uppercase tracking-wide ${isOnline ? 'bg-success/10 text-success border border-success/20 glow-green' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-success animate-pulse' : 'bg-slate-500'}`}></div>
+                                {isOnline ? 'SIMULATION ACTIVE' : 'OFFLINE'}
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <select 
+                                className="bg-slate-900 border border-slate-700 text-sm font-medium rounded-lg px-3 py-2.5 text-slate-200 outline-none focus:border-brand transition-colors cursor-pointer"
+                                value={taskId} 
+                                onChange={(e) => setTaskId(e.target.value)}
+                            >
+                                <option value="easy">Scenario: Easy Task</option>
+                                <option value="medium">Scenario: Medium Task</option>
+                                <option value="hard">Scenario: Hard Task</option>
+                                <option value="custom">Scenario: Custom JSON</option>
+                            </select>
+                            <button 
+                                onClick={handleDeploy}
+                                className="bg-brand hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-brand/20 active:scale-95"
+                            >
+                                <IconActivity /> Deploy Mission
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Main Content Viewport */}
+                    <div className="flex-1 overflow-hidden p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-[#0B1120]">
+                        
+                        {/* Left Side: Dashboards & Flow */}
+                        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6 overflow-y-auto pr-2 pb-6">
+                            
+                            {/* Setup panel for custom JSON if needed */}
+                            {taskId === 'custom' && (
+                                <Panel title="Custom Scenario Payload Configuration" icon={<IconServer />} className="shrink-0">
+                                    <textarea 
+                                        className="w-full h-32 bg-[#010409] border border-slate-700 rounded-lg text-xs font-mono p-4 text-slate-300 outline-none focus:border-brand focus:ring-1 focus:ring-brand shadow-inner"
+                                        value={customJson}
+                                        onChange={(e) => setCustomJson(e.target.value)}
+                                        placeholder="Enter custom environment configuration..."
+                                    />
+                                </Panel>
+                            )}
+
+                            {/* Attack Flow Visualization */}
+                            <Panel title="Live Extraction Chain" icon={<IconActivity />} className="shrink-0 h-40 flex items-center justify-center">
+                                <AttackFlow task={taskActive} knowledge={knowledge} />
+                            </Panel>
+
+                            {/* Metrics Grid */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+                                <Metric label="Task Objective" value={`${completedNodes}/${flow.length}`} subtext="Subtasks Complete" colorClass="text-white" />
+                                <Metric label="Budget Remaining" value={budgetRem} subtext={`/ ${limits.budget} total budget`} colorClass={budgetRem < 5 ? 'text-warning' : 'text-white'} />
+                                <Metric label="Alerts Triggered" value={alerts} subtext={alerts >= 3 ? "Containment Active" : "Undetected"} colorClass={alerts > 0 ? 'text-alert glow-red text-shadow' : 'text-success'} />
+                                <Metric label="Current Step" value={state?.step || 0} subtext="Agent executions" colorClass="text-brand" />
+                            </div>
+
+                            {/* Environment State Details */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-[300px]">
+                                <Panel title="Security Posture Analytics" icon={<IconShield />}>
+                                    <div className="space-y-6 pt-2">
+                                        <div>
+                                            <div className="flex justify-between text-sm mb-2 font-medium">
+                                                <span className="text-slate-300">Stealth Effectiveness</span>
+                                                <span className={stealthScore > 50 ? 'text-success' : 'text-alert'}>{stealthScore}%</span>
+                                            </div>
+                                            <ProgressBar progress={stealthScore} colorClass={stealthScore > 50 ? 'bg-success' : 'bg-alert'} />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-sm mb-2 font-medium">
+                                                <span className="text-slate-300">Operational Efficiency</span>
+                                                <span className="text-brand">{efficiencyScore.toFixed(0)}%</span>
+                                            </div>
+                                            <ProgressBar progress={efficiencyScore} colorClass="bg-brand" />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-sm mb-2 font-medium">
+                                                <span className="text-slate-300">Objective Progress</span>
+                                                <span className="text-success">{successProgress.toFixed(0)}%</span>
+                                            </div>
+                                            <ProgressBar progress={successProgress} colorClass="bg-success" />
+                                        </div>
+                                        
+                                        <div className="mt-8 bg-slate-900/50 rounded-lg p-4 border border-slate-700/50 shadow-inner">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Active Privilege</span>
+                                                <div className={`px-3 py-1 text-xs font-bold rounded-lg uppercase tracking-wider ${sim.access_level === 'admin' ? 'bg-alert/20 text-alert border border-alert/30 glow-red' : sim.access_level === 'user' ? 'bg-brand/20 text-brand border border-brand/30 glow-blue' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                                                    {sim.access_level || 'NONE'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Panel>
+                                
+                                <Panel title="Extracted Data Vault" icon={<IconServer />}>
+                                    {Object.keys(knowledge).length === 0 ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-500">
+                                            <IconServer className="w-12 h-12 mb-3 opacity-20" />
+                                            <p className="text-sm font-medium">No intel extracted yet.</p>
+                                        </div>
+                                    ) : (
+                                        <pre className="font-mono text-[11px] leading-relaxed text-brand whitespace-pre-wrap word-break bg-[#010409] p-4 rounded-lg border border-slate-800 h-full overflow-auto">
+                                            {JSON.stringify(knowledge, null, 2)}
+                                        </pre>
+                                    )}
+                                </Panel>
+                            </div>
+                        </div>
+
+                        {/* Right Side: Terminal Logs */}
+                        <div className="lg:col-span-5 xl:col-span-4 h-full flex flex-col pb-6">
+                            <Panel title="Action Trajectory System" icon={<IconServer />} className="flex-1 shadow-xl">
+                                <div className="absolute inset-0 bg-[#060913] p-5 overflow-y-auto font-mono text-[13px] leading-[1.6]">
+                                    {logs.length === 0 ? (
+                                        <div className="text-slate-600 flex items-center gap-2 mt-2">
+                                            <span className="animate-ping w-2 h-2 bg-slate-600 rounded-full inline-block"></span> 
+                                            System initializing... waiting for commands.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1.5 pb-8">
+                                            {logs.map((log, i) => {
+                                                let style = "text-slate-400";
+                                                let prefix = "";
+                                                if (log.includes("[!]")) {
+                                                    style = "text-alert font-medium bg-alert/5 px-2 py-1 rounded border-l-2 border-alert";
+                                                } else if (log.includes("[-]")) {
+                                                    style = "text-warning font-medium";
+                                                } else if (log.includes("[+]")) {
+                                                    style = "text-success font-medium";
+                                                } else if (log.includes("[i]")) {
+                                                    style = "text-brand";
+                                                } else if (log.includes("[*]")) {
+                                                    style = "text-brand/80";
+                                                }
+                                                return <div key={i} className={`terminal-log ${style}`}>{log}</div>;
+                                            })}
+                                            <div ref={logsEndRef} className="h-4" />
+                                        </div>
+                                    )}
+                                </div>
+                            </Panel>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
     </script>
 </body>
 </html>
