@@ -397,7 +397,7 @@ class CloudRedTeamEnvironment(
         b0 = float(self.grader(self.sim_data))
         b1 = float(self.sim_data["alerts_triggered"]) * 0.2
         z = safe_score(b0 + p - b1)
-        d = bool(k.get("objective_complete")) or b0 >= 0.99 or self.env_state.step_count >= 10
+        d = bool(k.get("objective_complete")) or b0 >= 1.0 or self.env_state.step_count >= 10
 
         o = self._o(q=q)
         o.reward = z

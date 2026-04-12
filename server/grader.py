@@ -15,17 +15,17 @@ based on action consistency (avoiding repeated/redundant actions).
 from typing import Callable, Dict
 
 
-def safe_score(x: float, eps: float = 1e-6) -> float:
+def safe_score(x: float, eps: float = 0.001) -> float:
     """
-    Strictly ensure that scores are within (0, 1) range.
-    NEVER returns 0.0 or 1.0.
+    Strictly ensure that scores are within (0.001, 0.999) range.
+    Guarantees no 0.0 or 1.0 while maintaining high precision.
     """
     val = float(x)
     return min(max(val, eps), 1.0 - eps)
 
 
 def clamp(val: float) -> float:
-    """Legacy wrapper for safe_score to maintain backward compatibility."""
+    """Clamps to strict (0.001, 0.999) range."""
     return safe_score(val)
 
 
@@ -60,7 +60,7 @@ def _compute_consistency(sim_data: dict) -> float:
     """
     logs = sim_data.get("logs", []) or []
     if len(logs) < 2:
-        return safe_score(1.0)
+        return safe_score(0.99)
 
     # Count consecutive duplicate log patterns
     duplicates = 0
@@ -68,7 +68,7 @@ def _compute_consistency(sim_data: dict) -> float:
         if logs[i] == logs[i - 1]:
             duplicates += 1
 
-    score = 1.0 - (duplicates * 0.15)
+    score = 0.99 - (duplicates * 0.1)
     return safe_score(score)
 
 
