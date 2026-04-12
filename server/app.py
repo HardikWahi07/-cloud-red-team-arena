@@ -18,17 +18,18 @@ app = create_app(
 )
 
 
-@app.get("/")
-def read_root():
+@app.get("/api/info")
+def info():
     return {
         "env": "CloudRedTeamArena",
         "version": "1.0.0",
         "tasks": ["easy", "medium", "hard"],
-        "endpoints": ["/", "/reset", "/step", "/state", "/ws", "/dashboard", "/api/ui-state"],
+        "endpoints": ["/", "/api/info", "/reset", "/step", "/state", "/ws", "/dashboard", "/api/ui-state"],
     }
 
 from fastapi.responses import HTMLResponse
 import os
+@app.get("/")
 @app.get("/dashboard")
 def dashboard():
     ui_path = os.path.join(os.path.dirname(__file__), "ui.html")
